@@ -6,6 +6,9 @@ on:
   schedule:
     - cron: "17 20 * * *"     # 20:17 UTC = 01:47 India time
   workflow_dispatch:          # "Run workflow" button for a manual update
+  push:                       # also when the code or the report template changes
+    branches: [main]
+    paths: ["pipeline/**", "02_generate_data.py", ".github/workflows/**"]
 
 permissions:
   contents: write

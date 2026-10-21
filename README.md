@@ -6,7 +6,7 @@ A complete **MySQL** database behind a Swiggy / Zomato–style food delivery app
 
 > Built by **Anand Kumar** (M.Tech CSE, IIIT Guwahati) · MySQL 8/9 · Python · SQL window functions · CTEs
 
-**🔴 Live report, updated every night:** https://anand201r-del.github.io/food-delivery-analytics/
+**🔴 Live report, updated every night:** https://anand201r-del.github.io/Food-Delivery-Analytics/
 
 ![Dashboard](images/dashboard_light.png)
 
@@ -215,7 +215,7 @@ SELECT * FROM rest_rev WHERE city_rank <= 10 ORDER BY city_name, city_rank;
 
 ## 📈 Dashboard
 
-Open the **[live report](https://anand201r-del.github.io/food-delivery-analytics/)**, or `docs/index.html` locally (one self-contained file, no server needed). It is laid out like a Power BI report:
+Open the **[live report](https://anand201r-del.github.io/Food-Delivery-Analytics/)**, or `docs/index.html` locally (one self-contained file, no server needed). It is laid out like a Power BI report:
 
 - **Home** cover page with the project summary, headline numbers and key findings.
 - **Report pages:** Overview, Scorecard, Customers, Delivery, Restaurants, Coupons & payments, About.
