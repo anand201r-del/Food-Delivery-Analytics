@@ -1,0 +1,366 @@
+[
+ {
+  "date": "2026-10-01",
+  "orders": 229,
+  "revenue": 92860,
+  "new_customers": 23,
+  "rain_cities": [
+   "Aizawl",
+   "Coimbatore",
+   "Dimapur",
+   "Gangtok",
+   "Imphal",
+   "Itanagar",
+   "Kolkata",
+   "Madurai",
+   "Shillong",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-02",
+  "orders": 270,
+  "revenue": 111353,
+  "new_customers": 17,
+  "rain_cities": [
+   "Agartala",
+   "Dimapur",
+   "Mangaluru",
+   "Mumbai",
+   "Thiruvananthapuram",
+   "Visakhapatnam"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-03",
+  "orders": 302,
+  "revenue": 114879,
+  "new_customers": 21,
+  "rain_cities": [
+   "Dimapur",
+   "Gangtok",
+   "Kochi",
+   "Mangaluru",
+   "Siliguri",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-04",
+  "orders": 244,
+  "revenue": 96160,
+  "new_customers": 20,
+  "rain_cities": [
+   "Coimbatore",
+   "Guwahati",
+   "Itanagar",
+   "Kochi",
+   "Madurai",
+   "Mysuru",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-05",
+  "orders": 158,
+  "revenue": 63469,
+  "new_customers": 19,
+  "rain_cities": [
+   "Bengaluru",
+   "Guwahati",
+   "Itanagar",
+   "Madurai",
+   "Mangaluru",
+   "Mysuru",
+   "Thiruvananthapuram",
+   "Vijayawada"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-06",
+  "orders": 162,
+  "revenue": 66071,
+  "new_customers": 21,
+  "rain_cities": [
+   "Bengaluru",
+   "Chennai",
+   "Coimbatore",
+   "Dehradun",
+   "Kochi",
+   "Ranchi",
+   "Shillong",
+   "Siliguri",
+   "Thiruvananthapuram",
+   "Varanasi"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-07",
+  "orders": 193,
+  "revenue": 81729,
+  "new_customers": 26,
+  "rain_cities": [
+   "Amritsar",
+   "Coimbatore",
+   "Dehradun",
+   "Kochi",
+   "Kolkata",
+   "Lucknow",
+   "Mangaluru",
+   "Nagpur",
+   "Ranchi",
+   "Siliguri",
+   "Surat"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-08",
+  "orders": 218,
+  "revenue": 86919,
+  "new_customers": 16,
+  "rain_cities": [
+   "Agartala",
+   "Aizawl",
+   "Amritsar",
+   "Coimbatore",
+   "Dehradun",
+   "Guwahati",
+   "Imphal",
+   "Kolkata",
+   "Lucknow",
+   "Madurai",
+   "Mangaluru",
+   "Siliguri",
+   "Srinagar",
+   "Thiruvananthapuram",
+   "Varanasi"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-09",
+  "orders": 238,
+  "revenue": 105591,
+  "new_customers": 18,
+  "rain_cities": [
+   "Agartala",
+   "Coimbatore",
+   "Dehradun",
+   "Dimapur",
+   "Gangtok",
+   "Guwahati",
+   "Imphal",
+   "Itanagar",
+   "Kochi",
+   "Lucknow",
+   "Madurai",
+   "Mangaluru",
+   "Mysuru",
+   "Shillong",
+   "Siliguri",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-10",
+  "orders": 275,
+  "revenue": 112268,
+  "new_customers": 15,
+  "rain_cities": [
+   "Bhubaneswar",
+   "Coimbatore",
+   "Imphal",
+   "Mangaluru",
+   "Patna",
+   "Shillong",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-11",
+  "orders": 311,
+  "revenue": 117442,
+  "new_customers": 17,
+  "rain_cities": [
+   "Amritsar",
+   "Chandigarh",
+   "Kochi",
+   "Kolkata",
+   "Ludhiana",
+   "Shimla",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-12",
+  "orders": 179,
+  "revenue": 73276,
+  "new_customers": 22,
+  "rain_cities": [
+   "Madurai",
+   "Noida",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-13",
+  "orders": 189,
+  "revenue": 76359,
+  "new_customers": 21,
+  "rain_cities": [
+   "Bhubaneswar",
+   "Srinagar",
+   "Visakhapatnam"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-14",
+  "orders": 211,
+  "revenue": 82843,
+  "new_customers": 22,
+  "rain_cities": [
+   "Bhubaneswar",
+   "Chennai",
+   "Kolkata",
+   "Puducherry",
+   "Srinagar",
+   "Thiruvananthapuram",
+   "Visakhapatnam"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-15",
+  "orders": 218,
+  "revenue": 89695,
+  "new_customers": 18,
+  "rain_cities": [
+   "Agartala",
+   "Amritsar",
+   "Bengaluru",
+   "Chennai",
+   "Coimbatore",
+   "Dehradun",
+   "Delhi",
+   "Gurugram",
+   "Jaipur",
+   "Kochi",
+   "Kolkata",
+   "Madurai",
+   "Mangaluru",
+   "Mysuru",
+   "Noida",
+   "Puducherry",
+   "Shimla",
+   "Srinagar",
+   "Thiruvananthapuram",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-16",
+  "orders": 235,
+  "revenue": 98517,
+  "new_customers": 23,
+  "rain_cities": [
+   "Bengaluru",
+   "Bhubaneswar",
+   "Chennai",
+   "Coimbatore",
+   "Gangtok",
+   "Madurai",
+   "Mangaluru",
+   "Mysuru",
+   "Patna",
+   "Puducherry",
+   "Thiruvananthapuram",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-17",
+  "orders": 304,
+  "revenue": 113864,
+  "new_customers": 19,
+  "rain_cities": [
+   "Bengaluru",
+   "Bhubaneswar",
+   "Chennai",
+   "Coimbatore",
+   "Kochi",
+   "Madurai",
+   "Mangaluru",
+   "Mysuru",
+   "Panaji",
+   "Puducherry",
+   "Thiruvananthapuram",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-18",
+  "orders": 299,
+  "revenue": 135102,
+  "new_customers": 17,
+  "rain_cities": [
+   "Bengaluru",
+   "Chennai",
+   "Coimbatore",
+   "Panaji",
+   "Puducherry",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-19",
+  "orders": 199,
+  "revenue": 77344,
+  "new_customers": 23,
+  "rain_cities": [
+   "Chennai",
+   "Coimbatore",
+   "Kochi",
+   "Madurai",
+   "Mangaluru",
+   "Puducherry",
+   "Thiruvananthapuram",
+   "Vijayawada"
+  ],
+  "weather": true
+ },
+ {
+  "date": "2026-10-20",
+  "orders": 171,
+  "revenue": 71415,
+  "new_customers": 17,
+  "rain_cities": [
+   "Chennai",
+   "Indore",
+   "Kochi",
+   "Madurai",
+   "Puducherry",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
+ }
+]
