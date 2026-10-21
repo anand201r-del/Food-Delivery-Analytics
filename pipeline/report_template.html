@@ -1,0 +1,1610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Food Delivery Analytics</title>
+<meta name="description" content="Business intelligence dashboard for a food delivery platform: orders across 49 Indian cities in every state, built on a MySQL database and updated daily.">
+<style>
+/* Layout: dark navigation rail + compact slicer header + 12-column canvas of visual cards (Power BI report style) */
+:root {
+  color-scheme: light;
+  --canvas: #f3f2f1; --card: #ffffff; --card-2: #faf9f8; --border: #e1dfdd; --grid: #edebe9;
+  --text: #252423; --text-2: #605e5c; --text-3: #8a8886;
+  --rail: #1b2433; --rail-2: #253045; --rail-text: #c9d1de; --rail-active: #ffffff;
+  --blue: #118dff; --blue-weak: #c6e0ff; --orange: #e66c37; --purple: #8a3ab0;
+  --good: #107c10; --good-bg: #dff6dd; --warn: #8a5a00; --warn-bg: #fff4ce; --bad: #a4262c; --bad-bg: #fde7e9;
+  --seq-0: #eef5ff; --seq-1: #cfe4ff; --seq-2: #9cc8ff; --seq-3: #5aa6ff; --seq-4: #118dff; --seq-5: #0b5cad;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 0 1px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --canvas: #11141a; --card: #1a1f27; --card-2: #1f2530; --border: #2a313c; --grid: #232a35;
+    --text: #e8eaed; --text-2: #a7b0bc; --text-3: #7c8794;
+    --rail: #0b0f15; --rail-2: #18202c; --rail-text: #a7b0bc; --rail-active: #ffffff;
+    --blue: #2f8fff; --blue-weak: #1d3557; --orange: #e07040; --purple: #a95fd0;
+    --good: #6ccb5f; --good-bg: #13301a; --warn: #f2c94c; --warn-bg: #33290d; --bad: #ff8a8f; --bad-bg: #3a1619;
+    --seq-0: #1c2430; --seq-1: #1d3352; --seq-2: #1f4a7d; --seq-3: #2668b0; --seq-4: #2f8fff; --seq-5: #8cc2ff;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #11141a; --card: #1a1f27; --card-2: #1f2530; --border: #2a313c; --grid: #232a35;
+  --text: #e8eaed; --text-2: #a7b0bc; --text-3: #7c8794;
+  --rail: #0b0f15; --rail-2: #18202c; --rail-text: #a7b0bc; --rail-active: #ffffff;
+  --blue: #2f8fff; --blue-weak: #1d3557; --orange: #e07040; --purple: #a95fd0;
+  --good: #6ccb5f; --good-bg: #13301a; --warn: #f2c94c; --warn-bg: #33290d; --bad: #ff8a8f; --bad-bg: #3a1619;
+  --seq-0: #1c2430; --seq-1: #1d3352; --seq-2: #1f4a7d; --seq-3: #2668b0; --seq-4: #2f8fff; --seq-5: #8cc2ff;
+  --shadow: none;
+}
+/* aliases so the shared chart code keeps working */
+:root { --teal: var(--blue); --saffron: var(--orange); --violet: var(--purple); --teal-weak: var(--blue-weak); --ink: var(--text); --ink-2: var(--text-2); --muted: var(--text-3); --line: var(--border); --surface: var(--card); --sunk: var(--card-2); --raise: var(--card-2); --paper: var(--canvas); }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--canvas); color: var(--text); font: 14px/1.5 "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif; font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+
+.app { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 100vh; background: linear-gradient(to right, var(--rail) 220px, var(--canvas) 220px); }
+
+/* ---------- navigation rail ---------- */
+.rail { background: var(--rail); color: var(--rail-text); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 16px 12px; gap: 4px; }
+.logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; color: #fff; font-weight: 600; font-size: 14px; line-height: 1.2; }
+.logo small { display: block; color: var(--rail-text); font-weight: 400; font-size: 11.5px; }
+.navlbl { font-size: 11px; color: #7f8a9c; padding: 10px 10px 4px; font-weight: 600; }
+.tab { display: flex; align-items: center; gap: 10px; border: 0; background: none; color: var(--rail-text); padding: 9px 10px; border-radius: 6px; cursor: pointer; text-align: left; font-size: 13px; font-weight: 500; }
+.tab svg { flex: none; opacity: .85; }
+.tab:hover { background: var(--rail-2); color: #fff; }
+.tab[aria-selected="true"] { background: var(--rail-2); color: var(--rail-active); box-shadow: inset 3px 0 0 var(--blue); font-weight: 600; }
+.rail .foot { margin-top: auto; padding: 10px; font-size: 11.5px; color: #7f8a9c; line-height: 1.5; }
+.rail .foot b { color: var(--rail-text); font-weight: 600; }
+
+/* ---------- header ---------- */
+.main { min-width: 0; display: flex; flex-direction: column; }
+.top { position: sticky; top: 0; z-index: 20; background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; }
+.ttl { min-width: 0; margin-right: 6px; }
+.ttl h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.ttl .crumb { color: var(--text-3); font-size: 12px; }
+.filters { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.f-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.f-label { color: var(--text-2); font-size: 12px; font-weight: 600; }
+select.sel, input.sel { border: 1px solid var(--border); background: var(--card); border-radius: 4px; padding: 5px 8px; font-size: 13px; min-height: 30px; }
+select.sel:disabled { opacity: .55; cursor: not-allowed; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+select.slicer { min-width: 150px; font-weight: 600; }
+.range { position: relative; width: 150px; height: 28px; }
+.range input { position: absolute; inset: 0; width: 100%; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; height: 28px; }
+.range input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 16px; height: 16px; border-radius: 50%; background: var(--card); border: 2px solid var(--blue); cursor: pointer; position: relative; z-index: 2; }
+.range input::-moz-range-thumb { pointer-events: auto; width: 12px; height: 12px; border-radius: 50%; background: var(--card); border: 2px solid var(--blue); cursor: pointer; }
+.range .track { position: absolute; left: 8px; right: 8px; top: 12px; height: 4px; border-radius: 4px; background: var(--grid); }
+.range .fill { position: absolute; top: 12px; height: 4px; border-radius: 4px; background: var(--blue); }
+.range-out { font-weight: 600; font-size: 12.5px; min-width: 104px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--card); }
+.seg button { border: 0; background: none; padding: 4px 9px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.seg button:disabled { cursor: not-allowed; }
+.lock-note { display: none; font-size: 12px; color: var(--warn); background: var(--warn-bg); border-radius: 4px; padding: 3px 8px; font-weight: 600; }
+.locked .range, .locked #presets, .locked .range-out { opacity: .35; pointer-events: none; }
+.lock-banner { grid-column: span 12; display: flex; gap: 8px; align-items: center; background: var(--warn-bg); color: var(--warn); border-radius: 4px; padding: 7px 12px; font-size: 12.5px; font-weight: 600; }
+.reset { border: 1px solid var(--blue); background: none; color: var(--blue); font-weight: 600; font-size: 12.5px; cursor: pointer; padding: 0 10px; height: 30px; border-radius: 4px; display: none; align-items: center; gap: 5px; white-space: nowrap; }
+.reset:hover { background: var(--blue); color: #fff; }
+.reset.show { display: inline-flex; }
+.tools { display: flex; gap: 6px; margin-left: auto; }
+.icon-btn { border: 1px solid var(--border); background: var(--card); border-radius: 4px; height: 30px; min-width: 30px; padding: 0 8px; display: inline-flex; gap: 6px; align-items: center; justify-content: center; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.icon-btn:hover { border-color: var(--blue); color: var(--text); }
+
+/* ---------- canvas + cards ---------- */
+.canvas { padding: 16px 20px 28px; }
+.panel[hidden] { display: none; }
+.board { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; }
+.s12 { grid-column: span 12; } .s8 { grid-column: span 8; } .s7 { grid-column: span 7; } .s6 { grid-column: span 6; } .s5 { grid-column: span 5; } .s4 { grid-column: span 4; } .s3 { grid-column: span 3; }
+.box { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px 10px; min-width: 0; box-shadow: var(--shadow); position: relative; }
+.bh { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; min-height: 22px; }
+.box h2 { margin: 0; font-size: 14.5px; font-weight: 600; color: var(--text); }
+.box .sub { color: var(--text-2); font-size: 12.5px; margin: 1px 0 8px; }
+.take { display: none; }
+.acts { display: flex; gap: 2px; flex: none; opacity: .55; transition: opacity .15s; }
+.box:hover .acts, .acts:focus-within { opacity: 1; }
+.act { border: 1px solid transparent; background: none; border-radius: 4px; padding: 4px 7px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.act:hover { border-color: var(--border); background: var(--card-2); color: var(--text); }
+.act[aria-expanded="true"] { color: var(--blue); }
+pre.sql { display: none; margin: 4px 0 10px; padding: 10px 12px; background: var(--card-2); border: 1px solid var(--border); border-radius: 4px; font: 12px/1.55 Consolas, "Cascadia Mono", ui-monospace, Menlo, monospace; color: var(--text); overflow-x: auto; white-space: pre; }
+pre.sql.open { display: block; }
+pre.sql .kw { color: var(--blue); font-weight: 700; }
+pre.sql .cm { color: var(--text-3); }
+
+/* KPI cards */
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; grid-column: span 12; }
+.kpi { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px 8px; box-shadow: var(--shadow); min-width: 0; border-top: 3px solid var(--blue); }
+.kpi.alert { border-top-color: var(--orange); }
+.kl { color: var(--text-2); font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kv { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25; margin-top: 2px; }
+.kd { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-height: 20px; font-size: 11.5px; color: var(--text-3); }
+.d { display: inline-flex; align-items: center; gap: 2px; font-size: 11.5px; font-weight: 600; border-radius: 3px; padding: 0 5px; }
+.d.up { color: var(--good); background: var(--good-bg); } .d.down { color: var(--bad); background: var(--bad-bg); } .d.flat { color: var(--text-3); background: var(--card-2); }
+.kc { font-size: 11.5px; color: var(--text-2); }
+svg.spark { display: block; width: 100%; height: 26px; margin-top: 4px; overflow: visible; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; grid-column: span 12; margin: 0; }
+.stat-row > div { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--blue); border-radius: 6px; padding: 10px 14px; box-shadow: var(--shadow); display: flex; flex-direction: column-reverse; justify-content: flex-end; }
+.stat-row .n { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25; }
+.stat-row .t { color: var(--text-2); font-size: 12px; font-weight: 600; }
+
+/* charts */
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.lbl { fill: var(--text-3); font-size: 11.5px; }
+.val { fill: var(--text-2); font-size: 11.5px; font-weight: 600; }
+.gl { stroke: var(--grid); } .bl { stroke: var(--border); }
+.bar-t { fill: var(--blue); } .bar-s { fill: var(--orange); } .bar-w { fill: var(--blue-weak); } .bar-v { fill: var(--purple); }
+.hit { fill: transparent; } .hit:focus { outline: none; } .hit:focus-visible { stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.mk.on { opacity: .75; } .mk.hl { stroke: var(--text); stroke-width: 2.5; }
+.grow { animation: grow .3s ease-out both; transform-box: fill-box; }
+.grow.v { transform-origin: bottom; --sy: .05; } .grow.h { transform-origin: left; --sx: .05; }
+@keyframes grow { from { transform: scale(var(--sx, 1), var(--sy, 1)); } to { transform: none; } }
+.ln { fill: none; stroke: var(--blue); stroke-width: 2; stroke-linejoin: round; }
+.ln.c2 { stroke: var(--purple); stroke-dasharray: 6 4; }
+.ar { fill: var(--blue); opacity: .08; }
+.dt { fill: var(--blue); stroke: var(--card); stroke-width: 2; } .dt.c2 { fill: var(--purple); }
+.xh { stroke: var(--text-3); stroke-dasharray: 3 3; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--text-2); margin: -2px 0 6px; min-height: 0; }
+.legend:empty { display: none; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.sw.ln { height: 3px; width: 14px; }
+.heat-legend { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-3); margin-top: 6px; }
+.heat-legend .ramp { display: inline-flex; gap: 2px; }
+.heat-legend .ramp i { width: 16px; height: 8px; border-radius: 1px; display: inline-block; }
+.pareto { display: flex; gap: 2px; height: 34px; border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
+.pareto div { display: grid; place-items: center; color: #fff; font-weight: 600; font-size: 12px; min-width: 0; }
+.pareto-keys { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; font-size: 12px; color: var(--text-2); }
+
+/* tables + lists */
+table.data { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+table.data th { text-align: left; color: var(--text-2); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--card-2); }
+table.data td { padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+table.data .num { text-align: right; }
+table.data tbody tr:hover td { background: var(--card-2); }
+.cohort td.cell { text-align: center; font-weight: 600; border: 2px solid var(--card); }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 3px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.badge.good { color: var(--good); background: var(--good-bg); } .badge.warn { color: var(--warn); background: var(--warn-bg); } .badge.bad { color: var(--bad); background: var(--bad-bg); }
+.toplist { list-style: none; margin: 0; padding: 0; }
+.toplist li { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--grid); }
+.toplist li:last-child { border-bottom: 0; }
+.rk { width: 20px; height: 20px; border-radius: 3px; background: var(--card-2); border: 1px solid var(--border); display: grid; place-items: center; font-weight: 600; font-size: 11px; color: var(--text-2); }
+.toplist .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toplist .nm small { display: block; color: var(--text-3); font-weight: 400; font-size: 11.5px; }
+.toplist .rv { font-weight: 600; }
+details.tbl { margin-top: 6px; }
+details.tbl summary { cursor: pointer; color: var(--text-3); font-size: 11.5px; font-weight: 600; padding: 2px 0; }
+details.tbl summary:hover { color: var(--blue); }
+.note { color: var(--text-3); font-size: 11.5px; margin: 6px 0 0; }
+.pill { display: inline-flex; align-items: center; gap: 6px; background: var(--card-2); border: 1px solid var(--border); color: var(--text-2); border-radius: 3px; padding: 2px 4px 2px 8px; font-size: 12px; font-weight: 600; }
+.pill button { border: 0; background: none; cursor: pointer; width: 18px; height: 18px; display: grid; place-items: center; color: var(--text-3); }
+.more { border: 1px solid var(--border); background: var(--card); border-radius: 4px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; margin-top: 8px; }
+.more:hover { border-color: var(--blue); color: var(--text); }
+.info { border: 0; background: none; color: var(--text-3); cursor: help; padding: 0 2px; margin-left: 2px; font: 600 11px/1 "Segoe UI", sans-serif; vertical-align: 1px; }
+.info:hover, .info:focus-visible { color: var(--blue); }
+
+/* key insights list */
+.recs { list-style: none; margin: 0; padding: 0; }
+.recs li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 4px 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--grid); }
+.recs li:last-child { border-bottom: 0; }
+.recs .ico { width: 26px; height: 26px; border-radius: 4px; display: grid; place-items: center; background: var(--card-2); border: 1px solid var(--border); color: var(--blue); }
+.recs .rx b { display: block; font-weight: 600; font-size: 12.5px; }
+.recs .rx span { color: var(--text-3); font-size: 11.5px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.recs .rr { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.recs .go { border: 0; background: none; color: var(--blue); font-weight: 600; font-size: 11.5px; cursor: pointer; padding: 0; }
+.recs .go:hover { text-decoration: underline; }
+.box.flash { animation: flash 1.8s ease; }
+@keyframes flash { 0%, 55% { box-shadow: 0 0 0 2px var(--orange); } 100% { box-shadow: var(--shadow); } }
+
+/* about */
+.about { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr); gap: 12px; }
+.about h3 { font-size: 13.5px; font-weight: 600; margin: 14px 0 4px; }
+.about h3:first-child { margin-top: 0; }
+.about p, .about li { color: var(--text-2); font-size: 13px; }
+.about ul { padding-left: 18px; margin: 4px 0; }
+.files { list-style: none; padding: 0 !important; margin: 0; }
+.files li { display: grid; grid-template-columns: 200px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--grid); }
+.files code { font: 12px Consolas, ui-monospace, monospace; color: var(--text); background: var(--card-2); padding: 1px 6px; border-radius: 3px; justify-self: start; }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.tags span { background: var(--card-2); border: 1px solid var(--border); color: var(--text-2); border-radius: 3px; padding: 2px 8px; font-size: 11.5px; font-weight: 600; }
+.author { display: flex; gap: 12px; align-items: center; }
+.avatar { width: 42px; height: 42px; border-radius: 6px; background: var(--blue); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 16px; flex: none; }
+a { color: var(--blue); font-weight: 600; }
+
+.tip { position: fixed; z-index: 60; pointer-events: none; background: var(--card); color: var(--text); border: 1px solid var(--border); box-shadow: 0 4px 14px rgba(0,0,0,.14); border-radius: 4px; padding: 6px 9px; font-size: 12px; line-height: 1.45; opacity: 0; transition: opacity .1s; max-width: 280px; }
+.tip.show { opacity: 1; }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 20px); background: var(--text); color: var(--card); padding: 8px 14px; border-radius: 4px; font-size: 12.5px; font-weight: 600; opacity: 0; transition: .2s; z-index: 70; pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* responsive */
+@media (max-width: 1640px) { .icon-btn .bt { display: none; } }
+@media (max-width: 1280px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1100px) { .s8, .s7, .s6, .s5, .s4, .s3 { grid-column: span 12; } .about { grid-template-columns: 1fr; } }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; background: var(--canvas); }
+  .top { flex-direction: column; align-items: stretch; gap: 10px; }
+  .filters { flex-direction: column; align-items: stretch; gap: 10px; }
+  .f-group { flex-wrap: wrap; }
+  select.slicer { width: 100%; }
+  .tools { position: absolute; top: 10px; right: 14px; }
+  .top { position: relative; }
+  .rail { position: sticky; height: auto; flex-direction: row; overflow-x: auto; padding: 6px 10px; gap: 2px; z-index: 25; scrollbar-width: none; }
+  .rail .logo, .rail .navlbl, .rail .foot { display: none; }
+  .tab { white-space: nowrap; padding: 8px 10px; }
+  .tab[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--blue); }
+  .top { padding: 10px 14px; }
+  .canvas { padding: 12px 12px 24px; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .range { width: 100%; max-width: 320px; }
+  .files li { grid-template-columns: 1fr; gap: 2px; }
+}
+
+/* ---------- round 4: polish, home, scorecard ---------- */
+.box { transition: border-color .15s; }
+.box:hover { border-color: color-mix(in srgb, var(--blue) 30%, var(--border)); }
+select.mini { min-height: 26px; padding: 2px 6px; font-size: 12px; margin-left: auto; margin-right: 4px; }
+select.views { min-width: 0; max-width: 190px; }
+body.home .filters { display: none; }
+.cover { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 12px; }
+.hero-card { background: linear-gradient(135deg, #1b2433 0%, #1f3a66 100%); color: #fff; border: 0; padding: 26px 28px; display: flex; flex-direction: column; justify-content: center; }
+.hero-card:hover { border: 0; }
+.hero-card .by { color: #9fb3d1; font-size: 12.5px; font-weight: 600; }
+.hero-card h1 { font-size: 30px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; margin: 6px 0 10px; text-wrap: balance; }
+.hero-card p { color: #c9d4e5; font-size: 14px; max-width: 62ch; margin: 0 0 18px; }
+.cta { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; border-radius: 4px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; text-decoration: none; }
+.btn.primary { background: var(--blue); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.22); }
+.btn.ghost:hover { background: rgba(255,255,255,.16); }
+.cover-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cover-stats .kpi { display: flex; flex-direction: column; justify-content: space-between; }
+.sec { font-size: 14px; font-weight: 600; margin: 22px 0 10px; }
+.findings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.finding { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--orange); border-radius: 6px; padding: 12px 14px; box-shadow: var(--shadow); }
+.finding b { display: block; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.finding span { color: var(--text-2); font-size: 12.5px; }
+.pages-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pcard { text-align: left; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; box-shadow: var(--shadow); cursor: pointer; display: grid; gap: 4px; align-content: start; }
+.pcard:hover { border-color: var(--blue); }
+.pcard b { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.pcard span { color: var(--text-2); font-size: 12.5px; }
+.pcard.tip-card { cursor: default; background: var(--card-2); }
+.pcard.tip-card:hover { border-color: var(--border); }
+.steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.steps li { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; box-shadow: var(--shadow); display: grid; gap: 4px; }
+.steps .num { width: 24px; height: 24px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+.steps b { font-size: 13.5px; font-weight: 600; }
+.steps span:last-child { color: var(--text-2); font-size: 12.5px; }
+/* matrix + sortable tables */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable button { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+th.sortable button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+th .arr { color: var(--text-3); font-size: 10px; }
+th[aria-sort] .arr { color: var(--blue); }
+.dbx { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.dbt { flex: 1; min-width: 60px; height: 12px; }
+.dbt .db { display: block; height: 100%; background: var(--blue); opacity: .35; border-radius: 2px; }
+.dbx .tv { min-width: 58px; text-align: right; font-weight: 600; }
+td.bar { position: relative; }
+td.bar .db { position: absolute; left: 6px; top: 6px; bottom: 6px; background: var(--blue-weak); border-radius: 2px; }
+td.bar .tv { position: relative; font-weight: 600; }
+tr.drill { cursor: pointer; }
+tr.drill td:first-child button { all: unset; cursor: pointer; font-weight: 600; color: var(--text); }
+tr.drill td:first-child button:hover { color: var(--blue); text-decoration: underline; }
+tr.drill td:first-child button:focus-visible { outline: 2px solid var(--blue); }
+tfoot td { font-weight: 700; border-top: 2px solid var(--border); background: var(--card-2); }
+table.cm td.cell { text-align: center; font-size: 11px; font-weight: 600; border: 2px solid var(--card); min-width: 38px; padding: 6px 2px; }
+table.cm th { padding: 6px 2px; }
+table.cm th { text-align: center; font-size: 11px; }
+table.cm th:first-child, table.cm td:first-child { text-align: left; position: sticky; left: 0; background: var(--card); z-index: 1; }
+.fcband { fill: var(--blue); opacity: .12; }
+.ln.fc { stroke-dasharray: 5 4; }
+.dt.fc { fill: var(--card); stroke: var(--blue); stroke-width: 1.5; }
+.fczone { fill: var(--card-2); }
+@media (max-width: 1100px) { .cover { grid-template-columns: 1fr; } .findings, .pages-grid, .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .findings, .pages-grid, .steps { grid-template-columns: 1fr; } .hero-card h1 { font-size: 24px; } select.views { max-width: 140px; } }
+
+/* ---------- round 7: filter chips, tour, home note ---------- */
+.home-note { display: none; color: var(--text-2); font-size: 12.5px; flex: 1; }
+body.home .home-note { display: block; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: -4px 0 12px; }
+.chips:empty { display: none; }
+.chips .lab { color: var(--text-3); font-size: 12px; font-weight: 600; margin-right: 2px; }
+.chip2 { display: inline-flex; align-items: center; gap: 4px; background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 12px; font-weight: 600; color: var(--text); }
+.chip2 button { all: unset; cursor: pointer; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: var(--text-3); font-size: 11px; }
+.chip2 button:hover, .chip2 button:focus-visible { background: var(--card-2); color: var(--text); }
+body.home .chips { display: none; }
+.tour-focus { outline: 3px solid var(--blue) !important; outline-offset: 3px; position: relative; z-index: 5; }
+.tour { position: fixed; right: 20px; bottom: 20px; z-index: 80; width: min(360px, calc(100vw - 32px)); background: var(--card); color: var(--text); border: 1px solid var(--border); border-top: 3px solid var(--blue); border-radius: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.22); padding: 14px 16px 12px; }
+.tour[hidden] { display: none; }
+.latest { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; margin: 16px 0 4px; }
+.latest[hidden] { display: none; }
+.latest .lt-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.latest .lt-l > span:last-child { color: var(--text-2); }
+.latest .lt-r { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; color: var(--text-3); font-size: 11.5px; }
+.latest .lt-r svg { max-width: 100%; }
+.live { display: inline-flex; align-items: center; gap: 6px; color: var(--good, #1a7f37); font-size: 12px; font-weight: 600; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 25%, transparent); }
+.help-btn .q { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 11.5px; font-weight: 700; }
+.help-back { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 90; }
+.help-back[hidden], .help[hidden], .welcome[hidden] { display: none; }
+.help { position: fixed; top: 0; right: 0; bottom: 0; z-index: 91; width: min(420px, 100vw); background: var(--card); color: var(--text); box-shadow: -8px 0 28px rgba(0,0,0,.25); padding: 18px 20px; overflow-y: auto; }
+.help-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.help h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.help h3 { margin: 18px 0 6px; font-size: 14px; font-weight: 600; }
+.help-steps { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 8px; color: var(--text-2); }
+.help-steps b { color: var(--text); }
+.gloss { margin: 0; display: grid; gap: 2px; }
+.gloss dt { font-weight: 600; margin-top: 8px; }
+.gloss dd { margin: 0; color: var(--text-2); }
+.help-f { margin-top: 20px; }
+.welcome { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 70; width: min(560px, calc(100vw - 32px)); background: var(--card); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--blue); border-radius: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.2); padding: 12px 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.welcome > div:first-child { flex: 1 1 260px; }
+.welcome .wb { display: flex; gap: 8px; }
+.welcome .btn.ghost, .help .btn.ghost { background: none; color: var(--text); border-color: var(--border); }
+.welcome .btn.ghost:hover { background: var(--card-2); }
+/* filters get their own tidy row under the page title */
+.top { row-gap: 8px; }
+.filters { order: 3; flex: 1 1 100%; }
+.f-group .f-label { margin-right: -2px; }
+#stateSel, #citySel, #cmp { width: 152px; }
+#mFrom, #mTo { width: 98px; }
+@media (max-width: 1500px) { #presets { display: none; } }
+.main { min-width: 0; }
+@media (max-width: 860px) { .app { grid-template-columns: minmax(0, 1fr) !important; } .top { flex-wrap: nowrap; } .filters { flex: 0 0 auto; } }
+@media (max-width: 860px) {
+  .f-group { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px 10px; align-items: center; }
+  #stateSel, #citySel, #cmp, #mFrom, #mTo { width: 100%; }
+  #presets { display: inline-flex; grid-column: 1 / -1; justify-self: start; }
+}
+tr.drill.sel td { background: color-mix(in srgb, var(--blue) 8%, transparent); }
+.empty-msg { display: grid; place-items: center; min-height: 120px; color: var(--text-2); text-align: center; padding: 16px; }
+.tour .ts { color: var(--text-3); font-size: 11.5px; font-weight: 600; }
+.tour h3 { margin: 2px 0 6px; font-size: 15px; font-weight: 600; }
+.tour p { margin: 0 0 12px; color: var(--text-2); font-size: 13px; }
+.tour .tb { display: flex; gap: 8px; align-items: center; }
+.tour .tb .sp { flex: 1; }
+.tour .bar { height: 3px; background: var(--grid); border-radius: 2px; margin: 0 0 10px; overflow: hidden; }
+.tour .bar i { display: block; height: 100%; background: var(--blue); transition: width .2s; }
+.tbtn { border: 1px solid var(--border); background: var(--card); border-radius: 4px; padding: 5px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--text); }
+.tbtn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.tbtn:disabled { opacity: .4; cursor: default; }
+
+/* ---------- round 8: header fits 1366px ---------- */
+.act[hidden] { display: none !important; }
+.rail-views { padding: 2px 6px 0; }
+.rail-views select.views { width: 100%; max-width: none; background: var(--rail-2); color: #e6ebf2; border-color: #33405a; font-size: 12.5px; }
+.ttl .crumb { white-space: nowrap; }
+@media (max-width: 1500px) {
+  .range { width: 120px; }
+  select.slicer { min-width: 0; }
+  .range-out { min-width: 96px; font-size: 12px; }
+  .filters { gap: 8px 12px; }
+  .top { gap: 8px 12px; }
+}
+@media (max-width: 860px) { .rail-views, .rail .navlbl { display: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+@media print {
+  .rail, .top .filters, .tools, .acts, details.tbl { display: none !important; }
+  .app { grid-template-columns: 1fr; }
+  .panel[hidden] { display: block !important; break-before: page; }
+  body { background: #fff; }
+  .box, .kpi { box-shadow: none; break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="logo">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="6" fill="#118dff"/><rect x="7" y="15" width="4" height="8" rx="1" fill="#fff"/><rect x="13" y="10" width="4" height="13" rx="1" fill="#fff"/><rect x="19" y="6" width="4" height="17" rx="1" fill="#ffd2bf"/></svg>
+      <span>Food Delivery<br>Analytics<small>MySQL · 1,00,000 orders</small></span>
+    </div>
+    <div class="navlbl">Report pages</div>
+    <div role="tablist" aria-label="Report pages" aria-orientation="vertical" style="display:contents">
+      <button class="tab" role="tab" id="t-home" aria-controls="p-home" aria-selected="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+      <button class="tab" role="tab" id="t-ov" aria-controls="p-ov" aria-selected="false" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Overview</button>
+      <button class="tab" role="tab" id="t-city" aria-controls="p-city" aria-selected="false" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>Scorecard</button>
+      <button class="tab" role="tab" id="t-cu" aria-controls="p-cu" aria-selected="false" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg>Customers</button>
+      <button class="tab" role="tab" id="t-de" aria-controls="p-de" aria-selected="false" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h3l2 6M5.5 17.5L9 9h6l3.5 8.5"/></svg>Delivery</button>
+      <button class="tab" role="tab" id="t-re" aria-controls="p-re" aria-selected="false" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9M4 9v11h16V9M3 9h18M9 20v-6h6v6"/></svg>Restaurants</button>
+      <button class="tab" role="tab" id="t-co" aria-controls="p-co" aria-selected="false" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>Coupons &amp; payments</button>
+      <button class="tab" role="tab" id="t-ab" aria-controls="p-ab" aria-selected="false" tabindex="-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>About this project</button>
+    </div>
+    <div class="navlbl">Saved views</div>
+    <div class="rail-views"><label class="sr" for="views">Saved views</label><select class="sel views" id="views"></select></div>
+    <div class="foot">Data: <b>food_delivery</b> MySQL<br><span id="railRange">Jan 2025 – Sep 2026</span><br>Built by <b>Anand Kumar</b></div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div class="ttl"><h1 id="pageTitle">Home</h1><div class="crumb" id="crumb">All cities · Jan 2025 – Sep 2026</div></div>
+      <div class="home-note" id="homeNote">Data as of 30 Sep 2026 · choose a page to explore</div>
+      <div class="filters" aria-label="Filters">
+        <div class="f-group"><label class="f-label" for="stateSel">State</label><select class="sel slicer" id="stateSel"></select><label class="f-label" for="citySel">City</label><select class="sel slicer" id="citySel"></select></div>
+        <div class="f-group" id="monthGroup">
+          <span class="sr" id="rangeLbl">Months</span>
+          <label class="f-label" for="mFrom">From</label><select class="sel slicer" id="mFrom"></select><label class="f-label" for="mTo">to</label><select class="sel slicer" id="mTo"></select>
+          <div class="range" id="range" hidden><div class="track"></div><div class="fill" id="rangeFill"></div>
+            <input type="range" id="m0" min="0" max="20" value="0" aria-labelledby="rangeLbl" aria-label="Start month">
+            <input type="range" id="m1" min="0" max="20" value="20" aria-label="End month">
+          </div>
+          <span class="range-out sr" id="rangeOut" aria-live="polite"></span>
+          <div class="seg" id="presets" role="group" aria-label="Quick date ranges"><button type="button" data-p="all">All</button><button type="button" data-p="2025">2025</button><button type="button" data-p="2026">2026</button><button type="button" data-p="6m">6M</button></div>
+          
+        </div>
+        <div class="f-group"><label class="f-label" for="cmp">Compare</label><select class="sel slicer" id="cmp"></select></div>
+        <button class="reset" id="reset" type="button" title="Go back to all of India and all months"><span aria-hidden="true">✕</span> Clear filters</button>
+      </div>
+      <div class="tools">
+        <button class="icon-btn" id="share" type="button" title="Copy a link to this exact view"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span class="bt">Copy link</span></button>
+        <button class="icon-btn" id="print" type="button" title="Save the report as a PDF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/></svg><span class="bt">Export PDF</span></button>
+        <button class="icon-btn help-btn" id="helpBtn" type="button" aria-haspopup="dialog" title="How to use this report"><span class="q" aria-hidden="true">?</span><span class="bt">Help</span></button>
+        <button class="icon-btn" id="theme" type="button" aria-label="Switch light or dark mode"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      </div>
+    </header>
+
+    <main class="canvas" id="main">
+      <div class="chips" id="chips" aria-label="Active filters"></div>
+      <!-- HOME -->
+      <section class="panel" role="tabpanel" id="p-home" aria-labelledby="t-home">
+        <div class="cover">
+          <div class="box hero-card">
+            <div class="by">Portfolio project · Anand Kumar · M.Tech CSE, IIIT Guwahati</div>
+            <h1>Food Delivery Platform Analytics</h1>
+            <p>A MySQL database for a Swiggy / Zomato-style app with 12 tables and 1,00,000 orders across 49 cities in every Indian state, plus stored procedures, triggers, indexes, 34 analysis queries and this interactive report.</p>
+            <div class="cta"><button class="btn primary" type="button" data-go="t-ov">Open the report</button><button class="btn ghost" type="button" data-go="t-city">See the state scorecard</button><a class="btn ghost" href="https://github.com/anand201r-del" target="_blank" rel="noopener">View my GitHub</a><button class="btn ghost" type="button" id="tourBtn">Take a 1-minute tour</button></div>
+          </div>
+          <div class="cover-stats" id="homeStats"></div>
+        </div>
+        <div class="latest" id="latest"></div>
+        <h2 class="sec">Key findings</h2>
+        <div class="findings" id="homeFindings"></div>
+        <h2 class="sec">Report pages</h2>
+        <div class="pages-grid">
+          <button class="pcard" type="button" data-go="t-ov"><b>Overview</b><span>KPIs, revenue trend with forecast, order timing, top restaurants and key insights.</span></button>
+          <button class="pcard" type="button" data-go="t-city"><b>State scorecard</b><span>All states side by side with conditional formatting; click a state to see its cities.</span></button>
+          <button class="pcard" type="button" data-go="t-cu"><b>Customers</b><span>Customer status, RFM segments, spend groups and cohort retention.</span></button>
+          <button class="pcard" type="button" data-go="t-de"><b>Delivery</b><span>Late deliveries by hour, delivery-time distribution, vehicles and rider leaderboard.</span></button>
+          <button class="pcard" type="button" data-go="t-re"><b>Restaurants</b><span>Revenue vs rating for 900 restaurants, a watch list and a sortable leaderboard.</span></button>
+          <button class="pcard" type="button" data-go="t-co"><b>Coupons &amp; payments</b><span>Return on every coupon, seasonal coupon lift and payment mix by city.</span></button>
+          <button class="pcard" type="button" data-go="t-ab"><b>About this project</b><span>What was built, SQL techniques, tools and repository files.</span></button>
+          <div class="pcard tip-card"><b>Tips</b><span>Pick a state, city and months at the top of any page, hover a chart for exact numbers, and press <b>?</b> Help if you get stuck.</span></div>
+        </div>
+        <h2 class="sec">How it was built</h2>
+        <ol class="steps">
+          <li><span class="num">1</span><b>Design the schema</b><span>12 tables in 3NF with keys and constraints.</span></li>
+          <li><span class="num">2</span><b>Generate the data</b><span>Python script: 1,00,000 orders across every state, calibrated to Swiggy and Zomato figures.</span></li>
+          <li><span class="num">3</span><b>Add business logic</b><span>Transactions, procedures, triggers and indexes in MySQL.</span></li>
+          <li><span class="num">4</span><b>Analyse and report</b><span>34 SQL queries, 7 views and this report.</span></li>
+        </ol>
+      </section>
+
+      <!-- OVERVIEW -->
+      <section class="panel" role="tabpanel" id="p-ov" aria-labelledby="t-ov" hidden>
+        <div class="board">
+          <div class="kpis" id="kpis"></div>
+          <div class="box s8" data-sql="month" data-png="c-month"><div class="bh"><h2>Revenue by month</h2></div><p class="sub">₹ lakh, delivered orders · click a month to drill in</p><p class="take" id="tk-month"></p><div class="legend" id="lg-month"></div><div class="chart" id="c-month"></div></div>
+          <div class="box s4" data-sql="city" data-png="c-city"><div class="bh"><h2 id="h-city">Revenue by state</h2></div><p class="sub">₹ lakh · click a bar to filter</p><p class="take" id="tk-city"></p><div class="chart" id="c-city"></div></div>
+          <div class="box s6" data-sql="hour" data-png="c-hour"><div class="bh"><h2>Orders by hour of day</h2></div><p class="sub" id="sub-hour">Lunch and dinner rush in orange</p><div class="chart" id="c-hour"></div></div>
+          <div class="box s6" data-sql="heat" data-png="c-heat"><div class="bh"><h2>Orders by day and hour</h2></div><p class="sub" id="sub-heat">Darker = more orders</p><p class="take" id="tk-heat"></p><div class="chart" id="c-heat"></div></div>
+          <div class="box s4" data-sql="cuisine" data-png="c-cuisine"><div class="bh"><h2>Revenue by cuisine</h2></div><p class="sub">₹ lakh · click to filter restaurants</p><p class="take" id="tk-cuisine"></p><div class="chart" id="c-cuisine"></div></div>
+          <div class="box s4" data-sql="top"><div class="bh"><h2>Top restaurants</h2><label class="sr" for="topN">How many</label><select class="sel mini" id="topN"><option value="5">Top 5</option><option value="10">Top 10</option></select></div><p class="sub">By revenue in the selected months</p><p class="take" id="tk-top"></p><div id="cuisinePill"></div><ol class="toplist" id="c-top"></ol></div>
+          <div class="box s4" data-sql="recs"><div class="bh"><h2>Key insights</h2></div><p class="sub">Generated from the current filters</p><ul class="recs" id="c-recs"></ul></div>
+        </div>
+      </section>
+
+      <!-- CITY SCORECARD -->
+      <section class="panel" role="tabpanel" id="p-city" aria-labelledby="t-city" hidden>
+        <div class="board">
+          <div class="box s12" data-sql="scorecard"><div class="bh"><h2 id="h-score">State scorecard</h2></div><p class="sub" id="sub-score">Selected months vs the same number of months before · click a column to sort · click a city to drill through</p><div id="c-score" style="overflow-x:auto"></div></div>
+          <div class="box s12" data-sql="citymonth"><div class="bh"><h2 id="h-cm">Revenue by state and month</h2></div><p class="sub" id="sub-cm">₹ lakh · darker = higher revenue</p><div id="c-cm" style="overflow-x:auto"></div></div>
+        </div>
+      </section>
+
+      <!-- CUSTOMERS -->
+      <section class="panel" role="tabpanel" id="p-cu" aria-labelledby="t-cu" hidden>
+        <div class="board">
+          <div class="lock-banner"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Customer metrics use each customer's full order history, so the month filter is off on this page.</div>
+          <div class="stat-row" id="st-seg"></div>
+          <div class="box s7" data-sql="seg" data-png="c-seg"><div class="bh"><h2>Customer status<button class="info" type="button" data-def="status" aria-label="What does this mean?">ⓘ</button></h2></div><p class="sub">Customers, by days since last order</p><p class="take" id="tk-seg"></p><div class="chart" id="c-seg"></div></div>
+          <div class="box s5" data-sql="pareto"><div class="bh"><h2>Revenue by customer spending level</h2></div><p class="sub">Customers split into four equal groups</p><p class="take" id="tk-par"></p><div id="c-par"></div></div>
+          <div class="box s12" data-sql="cohort"><div class="bh"><h2>Do new customers come back?</h2></div><p class="sub">% of new customers who ordered again, by first-order month</p><p class="take" id="tk-coh"></p><div id="c-coh" style="overflow-x:auto"></div></div>
+          <div class="box s12" data-sql="rfm"><div class="bh"><h2>Customer groups by loyalty (RFM)</h2></div><p class="sub">Recency (days since last order) and frequency (orders), scored 1–5, with each segment's share of revenue</p><div id="c-rfm" style="overflow-x:auto"></div></div>
+        </div>
+      </section>
+
+      <!-- DELIVERY -->
+      <section class="panel" role="tabpanel" id="p-de" aria-labelledby="t-de" hidden>
+        <div class="board">
+          <div class="stat-row" id="st-late"></div>
+          <div class="box s12" data-sql="late" data-png="c-late"><div class="bh"><h2>Late deliveries by hour<button class="info" type="button" data-def="late" aria-label="What does this mean?">ⓘ</button></h2></div><p class="sub">% of delivered orders · rush hours in orange</p><p class="take" id="tk-late"></p><div class="chart" id="c-late"></div></div>
+          <div class="box s4" data-sql="dist" data-png="c-dist"><div class="bh"><h2>Delivery time distribution</h2></div><p class="sub" id="sub-dist">% of delivered orders by minutes taken</p><div class="chart" id="c-dist"></div></div>
+          <div class="box s4" data-sql="rate" data-png="c-rate"><div class="bh"><h2>Do late orders get lower ratings?</h2></div><p class="sub">Average stars, 1–5</p><p class="take" id="tk-rate"></p><div class="chart" id="c-rate"></div></div>
+          <div class="box s4" data-sql="veh" data-png="c-veh"><div class="bh"><h2>Late deliveries by rider vehicle</h2></div><p class="sub">With average delivery minutes</p><p class="take" id="tk-veh"></p><div class="chart" id="c-veh"></div></div>
+          <div class="box s12" data-sql="partners"><div class="bh"><h2>Rider leaderboard</h2></div><p class="sub">Riders with 40+ deliveries, full period</p><p class="take" id="tk-part"></p>
+            <div class="seg" id="partSeg" role="group" aria-label="Leaderboard view" style="margin-bottom:8px"><button type="button" data-v="fast" aria-pressed="true">Fastest</button><button type="button" data-v="slow" aria-pressed="false">Slowest</button></div>
+            <div id="c-part" style="overflow-x:auto"></div></div>
+        </div>
+      </section>
+
+      <!-- RESTAURANTS -->
+      <section class="panel" role="tabpanel" id="p-re" aria-labelledby="t-re" hidden>
+        <div class="board">
+          <div class="box s8" data-sql="scatter" data-png="c-scatter"><div class="bh"><h2>Do better-rated restaurants earn more?</h2></div><p class="sub">Each dot is a restaurant · orange = top-20% revenue rated below 3.8★</p><p class="take" id="tk-scatter"></p><div class="chart" id="c-scatter"></div></div>
+          <div class="box s4" data-sql="risk"><div class="bh"><h2>Restaurants that need attention</h2></div><p class="sub">High revenue, rating below 3.8★</p><p class="take" id="tk-risk"></p><ol class="toplist" id="c-risk"></ol></div>
+          <div class="box s12" data-sql="top"><div class="bh"><h2>Restaurant leaderboard</h2></div><p class="sub" id="tk-board"></p>
+            <div class="f-group" style="margin-bottom:8px"><label class="f-label" for="q">Search</label><input id="q" class="sel" type="search" placeholder="Restaurant name" style="width:220px"><label class="f-label" for="boardN">Show</label><select class="sel" id="boardN"><option value="15">Top 15</option><option value="25">Top 25</option><option value="50">Top 50</option></select><span id="cuisinePill2"></span></div>
+            <div id="c-board" style="overflow-x:auto"></div></div>
+        </div>
+      </section>
+
+      <!-- COUPONS & PAYMENTS -->
+      <section class="panel" role="tabpanel" id="p-co" aria-labelledby="t-co" hidden>
+        <div class="board">
+          <div class="box s7" data-sql="cpn" data-png="c-cpn"><div class="bh"><h2>Which coupons pay off?</h2></div><p class="sub">By coupon, delivered orders</p><p class="take" id="tk-cpn"></p><div class="chart" id="c-cpn"></div></div>
+          <div class="box s5" data-sql="lift"><div class="bh"><h2>Did festival coupons bring more orders?</h2></div><p class="sub">Daily orders during vs before the coupon window (all of India)</p><div id="c-lift" style="overflow-x:auto"></div><p class="note">Before/after comparisons include seasonal demand; a holdout test proves cause.</p></div>
+          <div class="box s6" data-sql="pay" data-png="c-pay"><div class="bh"><h2>Payment method mix</h2></div><p class="sub">% of payments</p><p class="take" id="tk-pay"></p><div class="chart" id="c-pay"></div></div>
+          <div class="box s6" data-sql="paycity" data-png="c-cod"><div class="bh"><h2 id="h-cod">Cash on delivery by city</h2></div><p class="sub" id="sub-cod">% of payments · click a city to filter</p><p class="take" id="tk-cod"></p><div class="chart" id="c-cod"></div></div>
+        </div>
+      </section>
+
+      <!-- ABOUT -->
+      <section class="panel" role="tabpanel" id="p-ab" aria-labelledby="t-ab" hidden>
+        <div class="about">
+          <div class="box">
+            <h3>About this report</h3>
+            <p>Analytics layer for a food delivery platform in the style of Swiggy or Zomato. I designed the MySQL database, generated 1,00,000 historical orders (plus a new day of orders every night, using that day's real rainfall) across 49 cities in all 28 states plus Delhi, Chandigarh, Jammu &amp; Kashmir and Puducherry, wrote the business logic inside the database, and answered business questions with SQL. Every number in this report comes from that database.</p>
+            <h3>What I built</h3>
+            <ul>
+              <li><b>Schema:</b> 12 normalised tables (3NF) with primary and foreign keys, CHECK, UNIQUE and ENUM rules.</li>
+              <li><b>Data:</b> Python generator calibrated to public figures (average order ~₹430, UPI-first payments, metros ~70% of orders) with regional food, opening hours, lunch and dinner peaks, regional festivals, region-specific monsoons, IPL evenings, and loyal and one-time customers.</li>
+              <li><b>Transactions:</b> placing an order validates the cart, locks stock, applies a coupon, records payment and assigns the nearest free rider in one step, or rolls everything back.</li>
+              <li><b>Triggers:</b> status audit log, delivery timestamp, rider release, live restaurant rating, out-of-stock flag.</li>
+              <li><b>Performance:</b> 8 indexes verified with EXPLAIN; restaurant leaderboard 0.891 s → 0.156 s.</li>
+              <li><b>Reporting:</b> 7 SQL views feed this report and Power BI.</li>
+            </ul>
+            <h3>SQL techniques</h3>
+            <div class="tags"><span>JOINs</span><span>CTEs</span><span>RANK / DENSE_RANK</span><span>ROW_NUMBER</span><span>NTILE</span><span>LAG</span><span>PERCENT_RANK</span><span>Running totals</span><span>Cohorts</span><span>Pivots</span><span>JSON_TABLE</span><span>Stored procedures</span><span>Triggers</span><span>Transactions</span><span>Row locking</span><span>Indexes</span><span>Views</span></div>
+            <h3>Tools</h3>
+            <div class="tags"><span>MySQL 9.6</span><span>MySQL Workbench</span><span>Python</span><span>pandas</span><span>HTML / SVG / JavaScript</span></div>
+          </div>
+          <div style="display:grid;gap:12px;align-content:start">
+            <div class="box">
+              <h3>Repository files</h3>
+              <ul class="files">
+                <li><code>01_schema.sql</code><span>Database and 12 tables</span></li>
+                <li><code>02_generate_data.py</code><span>Data generator</span></li>
+                <li><code>03_analysis_queries.sql</code><span>34 business questions</span></li>
+                <li><code>04_procedures_triggers.sql</code><span>Transactions, procedures, triggers</span></li>
+                <li><code>05_indexes_performance.sql</code><span>Indexes, EXPLAIN before/after</span></li>
+                <li><code>06_views.sql</code><span>Reporting views</span></li>
+                <li><code>dashboard.html</code><span>This report</span></li>
+              </ul>
+            </div>
+            <div class="box">
+              <div class="author"><div class="avatar">AK</div><div><b>Anand Kumar</b><br><span class="note" style="margin:0">M.Tech CSE, IIIT Guwahati</span></div></div>
+              <p style="margin:10px 0 0">Code: <a href="https://github.com/anand201r-del" target="_blank" rel="noopener">github.com/anand201r-del</a></p>
+              <p class="note">All people, restaurants and orders are synthetic.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="help-back" id="helpBack" hidden></div>
+<aside class="help" id="help" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+  <div class="help-h"><h2 id="helpTitle">How to use this report</h2><button class="icon-btn" type="button" id="helpClose" aria-label="Close help">✕</button></div>
+  <ol class="help-steps">
+    <li><b>Pick a page</b> from the dark menu on the left (Overview, Customers, Delivery and more).</li>
+    <li><b>Filter</b> with the boxes at the top: choose a <b>State</b> (and, if you like, one of its cities) and a <b>From / to</b> month. Every chart updates at once.</li>
+    <li><b>Compare</b> two states or two cities: choose one first, then pick the other in "Compare".</li>
+    <li><b>Hover or tap</b> any bar, line or cell to see the exact number. Click a cuisine bar to filter by it.</li>
+    <li><b>Clear filters</b> appears next to the filters once you change one. It takes you back to everything.</li>
+    <li>Each chart has a <b>View SQL</b> button that shows the MySQL query behind it.</li>
+  </ol>
+  <h3>Words used in this report</h3>
+  <dl class="gloss">
+    <dt>Revenue</dt><dd>Money from delivered orders after coupon discounts. Cancelled orders are not counted.</dd>
+    <dt>Average order (AOV)</dt><dd>Revenue divided by the number of delivered orders.</dd>
+    <dt>Late delivery</dt><dd>Arrived after the time promised in the app (30–45 minutes).</dd>
+    <dt>Lakh / Crore</dt><dd>Indian number words. 1 lakh = 1,00,000 (one hundred thousand). 1 crore = 100 lakh (ten million).</dd>
+    <dt>Active / At risk / Churned</dt><dd>Last order within 30 days / 31–90 days ago / more than 90 days ago.</dd>
+    <dt>Cohort</dt><dd>All customers who placed their first order in the same month. Tracking them shows how many come back.</dd>
+    <dt>RFM</dt><dd>Groups customers by how <b>R</b>ecently, how <b>F</b>requently and how <b>M</b>uch they order.</dd>
+    <dt>UT</dt><dd>Union territory, such as Delhi, Chandigarh or Puducherry.</dd>
+    <dt>COD</dt><dd>Cash on delivery.</dd>
+  </dl>
+  <div class="help-f"><button class="btn primary" type="button" id="helpTour">Take the 1-minute tour</button></div>
+</aside>
+<div class="welcome" id="welcome" role="status" hidden><div><b>Welcome!</b> This is a food delivery sales report built on a MySQL database. New here? Take a quick tour, or open <b>Help</b> any time.</div><div class="wb"><button class="btn primary" type="button" id="wTour">Show me around</button><button class="btn ghost" type="button" id="wClose">No thanks</button></div></div>
+<div class="tour" id="tour" role="dialog" aria-modal="false" aria-labelledby="tourTitle" hidden><div class="bar"><i id="tourBar"></i></div><div class="ts" id="tourStep"></div><h3 id="tourTitle"></h3><p id="tourText"></p><div class="tb"><button class="tbtn" type="button" id="tourClose">Close</button><span class="sp"></span><button class="tbtn" type="button" id="tourBack">Back</button><button class="tbtn primary" type="button" id="tourNext">Next</button></div></div>
+<div class="tip" id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+const DATA = __DATA__;
+const M = DATA.months, CITIES = DATA.cities, CUIS = DATA.cuisines, VEH = DATA.vehicles, CODES = DATA.codes, METHODS = DATA.methods;
+const NM = M.length;
+const st = { city: 'All', cmp: '', m0: 0, m1: NM - 1, cuisine: null, part: 'fast', q: '', tab: 't-home', topN: 5, boardN: 15, sortB: { k: 'r', d: -1 }, sortS: { k: 'r', d: -1 } };
+
+// ---------------- SQL behind each chart ----------------
+const SQL = {
+  recs: `-- Recommendations combine several of the queries below:\n-- late % at rush hours, at-risk customers (vw_customer_360),\n-- coupon return per rupee (vw_coupon_performance) and bicycle late %.`,
+  month: `SELECT DATE_FORMAT(order_time, '%Y-%m') AS month,\n       SUM(final_amount) AS revenue,\n       ROUND(100 * (SUM(final_amount) - LAG(SUM(final_amount)) OVER (ORDER BY DATE_FORMAT(order_time, '%Y-%m')))\n             / LAG(SUM(final_amount)) OVER (ORDER BY DATE_FORMAT(order_time, '%Y-%m')), 1) AS mom_growth_pct\nFROM orders\nWHERE status = 'DELIVERED'\nGROUP BY month\nORDER BY month;`,
+  scorecard: `SELECT city_name, SUM(revenue) AS revenue, SUM(total_orders) AS orders,\n       ROUND(SUM(revenue) / SUM(delivered_orders), 2) AS avg_order_value,\n       ROUND(100 * (SUM(total_orders) - SUM(delivered_orders)) / SUM(total_orders), 2) AS cancel_pct\nFROM vw_daily_city_revenue\nWHERE order_date BETWEEN '2025-01-01' AND CURDATE()\nGROUP BY city_name\nORDER BY revenue DESC;`,
+  citymonth: `SELECT city_name, DATE_FORMAT(order_date, '%Y-%m') AS month, SUM(revenue) AS revenue\nFROM vw_daily_city_revenue\nGROUP BY city_name, month\nORDER BY city_name, month;`,
+  dist: `SELECT CASE WHEN mins < 15 THEN '<15' WHEN mins >= 60 THEN '60+'\n            ELSE CONCAT(FLOOR(mins / 5) * 5, '-', FLOOR(mins / 5) * 5 + 5) END AS minutes_bucket,\n       COUNT(*) AS deliveries\nFROM (SELECT TIMESTAMPDIFF(SECOND, order_time, delivered_time) / 60 AS mins\n      FROM orders WHERE status = 'DELIVERED') t\nGROUP BY minutes_bucket;`,
+  rfm: `WITH base AS (\n  SELECT customer_id,\n         DATEDIFF((SELECT MAX(order_time) FROM orders), MAX(order_time)) AS recency_days,\n         COUNT(*) AS frequency,\n         SUM(CASE WHEN status = 'DELIVERED' THEN final_amount ELSE 0 END) AS monetary\n  FROM orders GROUP BY customer_id\n), scored AS (\n  SELECT *, NTILE(5) OVER (ORDER BY recency_days DESC) AS r_score,\n            NTILE(5) OVER (ORDER BY frequency) AS f_score\n  FROM base\n)\nSELECT CASE WHEN r_score >= 4 AND f_score >= 4 THEN 'Champions'\n            WHEN f_score >= 4 AND r_score >= 2 THEN 'Loyal'\n            WHEN r_score >= 4 AND f_score >= 2 THEN 'Potential loyalists'\n            WHEN r_score >= 4 THEN 'New customers'\n            WHEN r_score <= 2 AND f_score >= 3 THEN 'At risk'\n            WHEN r_score <= 2 THEN 'Hibernating'\n            ELSE 'Needs attention' END AS segment,\n       COUNT(*) AS customers, ROUND(SUM(monetary)) AS revenue\nFROM scored GROUP BY segment;`,
+  hour: `SELECT HOUR(order_time) AS hour_of_day, COUNT(*) AS orders,\n       ROUND(100 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS pct_of_orders\nFROM orders\nGROUP BY hour_of_day\nORDER BY hour_of_day;`,
+  heat: `SELECT DAYNAME(order_time) AS day_name, HOUR(order_time) AS hour_of_day, COUNT(*) AS orders\nFROM orders\nGROUP BY DAYOFWEEK(order_time), day_name, hour_of_day\nORDER BY orders DESC;`,
+  top: `WITH rest_rev AS (\n  SELECT c.city_name, r.restaurant_name, SUM(o.final_amount) AS revenue,\n         RANK() OVER (PARTITION BY c.city_id ORDER BY SUM(o.final_amount) DESC) AS city_rank\n  FROM orders o\n  JOIN restaurants r ON r.restaurant_id = o.restaurant_id\n  JOIN zones z ON z.zone_id = r.zone_id\n  JOIN cities c ON c.city_id = z.city_id\n  WHERE o.status = 'DELIVERED'\n  GROUP BY c.city_id, c.city_name, r.restaurant_id, r.restaurant_name\n)\nSELECT * FROM rest_rev WHERE city_rank <= 10;`,
+  city: `SELECT c.city_name, SUM(o.final_amount) AS revenue,\n       ROUND(100 * SUM(o.final_amount) / SUM(SUM(o.final_amount)) OVER (), 1) AS share_pct\nFROM orders o\nJOIN restaurants r ON r.restaurant_id = o.restaurant_id\nJOIN zones z ON z.zone_id = r.zone_id\nJOIN cities c ON c.city_id = z.city_id\nWHERE o.status = 'DELIVERED'\nGROUP BY c.city_name\nORDER BY revenue DESC;`,
+  cuisine: `SELECT r.cuisine_type, COUNT(*) AS orders, SUM(o.final_amount) AS revenue,\n       ROUND(AVG(o.final_amount), 2) AS avg_order_value\nFROM orders o\nJOIN restaurants r ON r.restaurant_id = o.restaurant_id\nWHERE o.status = 'DELIVERED'\nGROUP BY r.cuisine_type\nORDER BY revenue DESC;`,
+  seg: `SELECT segment, COUNT(*) AS customers\nFROM vw_customer_360          -- Active <= 30 days, At risk 31-90, Churned > 90\nGROUP BY segment;`,
+  pareto: `WITH spend AS (\n  SELECT customer_id, SUM(final_amount) AS total_spend\n  FROM orders WHERE status = 'DELIVERED' GROUP BY customer_id\n), seg AS (\n  SELECT *, NTILE(4) OVER (ORDER BY total_spend DESC) AS quartile FROM spend\n)\nSELECT quartile, ROUND(100 * SUM(total_spend) / SUM(SUM(total_spend)) OVER (), 1) AS pct_of_revenue\nFROM seg GROUP BY quartile;`,
+  cohort: `WITH first_order AS (\n  SELECT customer_id, MIN(DATE_FORMAT(order_time, '%Y%m')) AS cohort FROM orders GROUP BY customer_id\n), activity AS (\n  SELECT DISTINCT o.customer_id, f.cohort,\n         PERIOD_DIFF(DATE_FORMAT(o.order_time, '%Y%m'), f.cohort) AS month_no\n  FROM orders o JOIN first_order f ON f.customer_id = o.customer_id\n)\nSELECT cohort, SUM(month_no = 0) AS new_customers,\n       ROUND(100 * SUM(month_no = 1) / SUM(month_no = 0), 1) AS m1_retention_pct\nFROM activity GROUP BY cohort;`,
+  late: `SELECT HOUR(order_time) AS hour_of_day,\n       ROUND(100 * AVG(TIMESTAMPDIFF(SECOND, order_time, delivered_time) / 60 > promised_minutes), 1) AS late_pct\nFROM orders\nWHERE status = 'DELIVERED'\nGROUP BY hour_of_day;`,
+  rate: `SELECT CASE WHEN late_by <= 0 THEN 'On time' WHEN late_by <= 10 THEN '1-10 min'\n            WHEN late_by <= 20 THEN '11-20 min' ELSE '20+ min' END AS lateness,\n       ROUND(AVG(delivery_rating), 2) AS avg_delivery_rating\nFROM (SELECT r.delivery_rating,\n             TIMESTAMPDIFF(SECOND, o.order_time, o.delivered_time) / 60 - o.promised_minutes AS late_by\n      FROM ratings r JOIN orders o ON o.order_id = r.order_id) t\nGROUP BY lateness;`,
+  veh: `SELECT p.vehicle_type,\n       ROUND(AVG(TIMESTAMPDIFF(SECOND, o.order_time, o.delivered_time) / 60), 1) AS avg_minutes,\n       ROUND(100 * AVG(TIMESTAMPDIFF(SECOND, o.order_time, o.delivered_time) / 60 > o.promised_minutes), 1) AS late_pct\nFROM orders o JOIN delivery_partners p ON p.partner_id = o.partner_id\nWHERE o.status = 'DELIVERED'\nGROUP BY p.vehicle_type;`,
+  partners: `SELECT partner_id, full_name, vehicle_type, deliveries, avg_delivery_minutes, late_pct,\n       RANK() OVER (ORDER BY avg_delivery_minutes) AS speed_rank\nFROM vw_partner_performance\nWHERE deliveries >= 40;`,
+  scatter: `SELECT restaurant_name, cuisine_type, avg_rating, revenue,\n       PERCENT_RANK() OVER (ORDER BY revenue) AS revenue_percentile\nFROM vw_restaurant_performance;`,
+  risk: `WITH rev AS (\n  SELECT r.restaurant_name, r.avg_rating, SUM(o.final_amount) AS revenue,\n         PERCENT_RANK() OVER (ORDER BY SUM(o.final_amount)) AS pct\n  FROM restaurants r JOIN orders o ON o.restaurant_id = r.restaurant_id AND o.status = 'DELIVERED'\n  GROUP BY r.restaurant_id, r.restaurant_name, r.avg_rating\n)\nSELECT * FROM rev WHERE pct >= 0.80 AND avg_rating < 3.8;`,
+  cpn: `SELECT coupon_code, orders_used, total_discount, revenue, revenue_per_rupee_discount\nFROM vw_coupon_performance\nORDER BY revenue_per_rupee_discount DESC;`,
+  lift: `-- Average daily orders during each seasonal coupon window vs the same\n-- number of days just before it (see Q25 in 03_analysis_queries.sql)\nSELECT coupon_code,\n  (SELECT COUNT(*) FROM orders o WHERE o.order_time >= p.valid_from\n     AND o.order_time < p.valid_to + INTERVAL 1 DAY) / p.days AS daily_during,\n  (SELECT COUNT(*) FROM orders o WHERE o.order_time >= p.valid_from - INTERVAL p.days DAY\n     AND o.order_time < p.valid_from) / p.days AS daily_before\nFROM (SELECT coupon_code, valid_from, valid_to, DATEDIFF(valid_to, valid_from) + 1 AS days\n      FROM coupons WHERE DATEDIFF(valid_to, valid_from) < 120) p;`,
+  pay: `SELECT payment_method, COUNT(*) AS payments,\n       ROUND(100 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS share_pct\nFROM payments\nGROUP BY payment_method;`,
+  paycity: `SELECT ci.city_name, ROUND(100 * AVG(p.payment_method = 'COD'), 1) AS cod_pct\nFROM payments p\nJOIN orders o ON o.order_id = p.order_id\nJOIN restaurants r ON r.restaurant_id = o.restaurant_id\nJOIN zones z ON z.zone_id = r.zone_id\nJOIN cities ci ON ci.city_id = z.city_id\nGROUP BY ci.city_name;`
+};
+const KW = /\b(SELECT|FROM|WHERE|JOIN|ON|AND|OR|GROUP BY|ORDER BY|WITH|AS|CASE|WHEN|THEN|ELSE|END|OVER|PARTITION BY|SUM|COUNT|AVG|ROUND|MIN|MAX|LAG|RANK|NTILE|PERCENT_RANK|DISTINCT|LIMIT|DESC|INTERVAL|DAY|HAVING|LEFT)\b/g;
+const hl = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').split('\n').map(l => {
+  const i = l.indexOf('--'); const code = i >= 0 ? l.slice(0, i) : l, cm = i >= 0 ? l.slice(i) : '';
+  return code.replace(KW, '<span class="kw">$1</span>') + (cm ? `<span class="cm">${cm}</span>` : '');
+}).join('\n');
+
+// ---------------- formatting ----------------
+const fmt = n => Math.round(n).toLocaleString('en-IN');
+const inr = n => '₹' + fmt(n);
+const L = n => ('₹' + (n / 1e5).toFixed(n >= 1e7 ? 0 : 1) + ' L').replace('.0 L', ' L');
+const money = n => n >= 1e7 ? '₹' + (n / 1e7).toFixed(2) + ' Cr' : L(n);
+const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MTD = DATA.mtd || null, LASTM = DATA.months[DATA.months.length - 1];
+const ml = m => { const [y, mo] = m.split('-'); return MN[+mo - 1] + ' ' + y.slice(2) + (MTD && m === LASTM ? ' MTD' : ''); };
+const mlong = m => { const [y, mo] = m.split('-'); return MN[+mo - 1] + ' ' + y + (MTD && m === LASTM ? ' (to date)' : ''); };
+const dlong = s => { const [y, mo, d] = s.split('-'); return `${+d} ${MN[+mo - 1]} ${y}`; };
+const AS_OF = DATA.asOf ? dlong(DATA.asOf) : '30 Sep 2026';
+const addMonths = (m, k) => { let [y, mo] = m.split('-').map(Number); mo += k; while (mo > 12) { mo -= 12; y++; } return `${y}-${String(mo).padStart(2, '0')}`; };
+const plainMonth = (m, long) => { const [y, mo] = m.split('-'); return MN[+mo - 1] + ' ' + (long ? y : y.slice(2)); };
+const hr = h => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? ' AM' : ' PM');
+const RUSH = h => (h >= 12 && h <= 14) || (h >= 19 && h <= 22);
+const PEAKH = [13, 20, 21];
+const STATES = Object.keys(DATA.states);
+const isSt = k => typeof k === 'string' && k.startsWith('st:');
+const cityName = c => !c ? '' : c === 'All' ? 'All India' : isSt(c) ? c.slice(3) : c;
+const stateOf = k => !k || k === 'All' ? null : isSt(k) ? k.slice(3) : DATA.cityState[k];
+const validKey = k => k === 'All' || !!DATA.cube[k] || (isSt(k) && !!DATA.states[k.slice(3)]);
+const inScope = (k, c) => k === 'All' || (isSt(k) ? DATA.cityState[c] === k.slice(3) : c === k);
+// rows for "by place" visuals: states for All India, otherwise the cities of the selected state
+const scopeRows = k => k === 'All' ? { keys: STATES.map(s => 'st:' + s), kind: 'state' } : { keys: DATA.states[stateOf(k)], kind: 'city' };
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------------- aggregation over city + month range ----------------
+const sumArr = (a, b) => a.map((v, i) => v + b[i]);
+function agg(city, m0, m1) {
+  const cs = city === 'All' ? CITIES : isSt(city) ? DATA.states[city.slice(3)] : [city];
+  const z = n => new Array(n).fill(0);
+  const A = { o: 0, d: 0, r: 0, l: 0, mn: 0, ds: 0, rs: 0, rn: 0, h: z(24), lh: z(24), dh: z(24), hm: z(168), cu: z(CUIS.length), cn: z(CUIS.length),
+    rls: z(4), rln: z(4), vn: z(4), vl: z(4), vm: z(4), cpn: z(CODES.length), cpd: z(CODES.length), cpr: z(CODES.length), pay: z(METHODS.length), dt: z(DATA.dtBins.length),
+    mr: z(NM), mo: z(NM), md: z(NM), ml: z(NM), mm: z(NM), mrs: z(NM), mrn: z(NM) };
+  cs.forEach(c => {
+    const C = DATA.cube[c];
+    for (let i = 0; i < NM; i++) { A.mr[i] += C.r[i]; A.mo[i] += C.o[i]; A.md[i] += C.d[i]; A.ml[i] += C.l[i]; A.mm[i] += C.mn[i]; A.mrs[i] += C.rs[i]; A.mrn[i] += C.rn[i]; }
+    for (let i = m0; i <= m1; i++) {
+      A.o += C.o[i]; A.d += C.d[i]; A.r += C.r[i]; A.l += C.l[i]; A.mn += C.mn[i]; A.ds += C.ds[i]; A.rs += C.rs[i]; A.rn += C.rn[i];
+      ['h', 'lh', 'dh', 'hm', 'cu', 'cn', 'rls', 'rln', 'vn', 'vl', 'vm', 'cpn', 'cpd', 'cpr', 'pay', 'dt'].forEach(k => { A[k] = sumArr(A[k], C[k][i]); });
+    }
+  });
+  A.aov = A.d ? A.r / A.d : 0; A.late = A.d ? 100 * A.l / A.d : 0; A.mins = A.d ? A.mn / A.d : 0; A.rating = A.rn ? A.rs / A.rn : 0; A.cancel = A.o ? 100 * (A.o - A.d) / A.o : 0;
+  return A;
+}
+
+// ---------------- svg + tooltip helpers ----------------
+const NS = 'http://www.w3.org/2000/svg';
+function S(tag, a, p) { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+function T(p, x, y, txt, cls, anchor) { const t = S('text', { x, y, class: cls || 'lbl', 'text-anchor': anchor || 'start' }, p); t.textContent = txt; return t; }
+const tip = document.getElementById('tip');
+function tipShow(e, html) {
+  tip.innerHTML = html; tip.classList.add('show');
+  const r = tip.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY - r.height - 12;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y < 8) y = e.clientY + 16;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+function tipHide() { tip.classList.remove('show'); }
+let lastTap = null, lastPtr = 'mouse';
+document.addEventListener('pointerdown', e => { lastPtr = e.pointerType; }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Tab' || e.key.startsWith('Arrow')) lastPtr = 'kbd'; }, true);
+const plain = h => h.replace(/<br>/g, '. ').replace(/<[^>]+>/g, '');
+const tipAt = (el, html) => { const r = el.getBoundingClientRect(); tipShow({ clientX: r.left + r.width / 2, clientY: r.top + 4 }, html); };
+function bind(hit, mark, html, onClick, opt = {}) {
+  if (!opt.noFocus) { hit.setAttribute('tabindex', '0'); hit.setAttribute('role', onClick ? 'button' : 'img'); hit.setAttribute('aria-label', plain(html())); }
+  hit.addEventListener('mousemove', e => { if (lastPtr !== 'mouse') return; mark && mark.classList.add('on'); tipShow(e, html()); });
+  hit.addEventListener('mouseleave', () => { if (lastPtr !== 'mouse') return; mark && mark.classList.remove('on'); tipHide(); });
+  hit.addEventListener('focus', () => { if (lastPtr !== 'mouse' && lastPtr !== 'kbd') return; mark && mark.classList.add('on'); tipAt(mark || hit, html()); });
+  hit.addEventListener('blur', () => { if (lastPtr !== 'mouse' && lastPtr !== 'kbd') return; mark && mark.classList.remove('on'); tipHide(); });
+  // touch: first tap shows the numbers, a second tap on a clickable mark applies the filter
+  hit.addEventListener('pointerup', e => {
+    if (e.pointerType === 'mouse') return;
+    if (lastTap !== hit) { lastTap = hit; hit._skip = true; tipShow(e, html() + (onClick ? '<br><i>Tap again to apply</i>' : '')); }
+  });
+  hit.addEventListener('click', () => { if (hit._skip) { hit._skip = false; return; } if (!onClick) return; tipHide(); lastTap = null; onClick(); });
+  if (onClick) hit.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tipHide(); onClick(); } });
+}
+document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' && !e.target.closest('.hit, .mk, .wedge, .info')) { tipHide(); lastTap = null; } });
+const fitW = (el, min, max) => Math.max(min, Math.min(max, Math.round(el.clientWidth || max)));
+function niceMax(v) { const p = Math.pow(10, Math.floor(Math.log10(v || 1))); for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p; return 10 * p; }
+const rTop = (x, y, w, h, r) => { r = Math.min(r, w / 2, h); return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`; };
+const rRight = (x, y, w, h, r) => { r = Math.min(r, h / 2, w); return `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`; };
+function table(el, head, rows, num = []) {
+  const d = document.createElement('details'); d.className = 'tbl'; d.innerHTML = '<summary>Show the numbers</summary>';
+  const t = document.createElement('table'); t.className = 'data';
+  t.innerHTML = '<thead><tr>' + head.map((h, i) => `<th class="${num.includes(i) ? 'num' : ''}">${h}</th>`).join('') + '</tr></thead><tbody>' +
+    rows.map(r => '<tr>' + r.map((c, i) => `<td class="${num.includes(i) ? 'num' : ''}">${c}</td>`).join('') + '</tr>').join('') + '</tbody>';
+  d.appendChild(t); el.appendChild(d);
+}
+
+function vbars(el, labels, vals, o) {
+  el.innerHTML = '';
+  const W = o.w === 'fit' ? fitW(el, 340, 1200) : (o.w || 640), H = o.h || 230, m = { t: 20, r: 6, b: 28, l: o.l || 46 };
+  const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': o.aria }, el);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, max = o.max || niceMax(Math.max(...vals.map(v => v || 0)));
+  const nt = o.ticks || 4;
+  for (let i = 0; i <= nt; i++) { const y = m.t + ih - ih * i / nt; S('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, class: i ? 'gl' : 'bl' }, svg); T(svg, m.l - 8, y + 4, (o.yf || fmt)(max * i / nt), 'lbl', 'end'); }
+  const n = vals.length, slot = iw / n, bw = Math.min(o.bw || 40, slot - 3);
+  vals.forEach((v, i) => {
+    if (v == null) return;
+    const h = Math.max(0, ih * Math.min(v, max) / max), x = m.l + slot * i + (slot - bw) / 2, y = m.t + ih - h;
+    const mk = S('path', { d: rTop(x, y, bw, h, 4), class: 'mk grow v ' + (o.cls ? o.cls(i) : 'bar-t') + (o.hl === i ? ' hl' : '') }, svg);
+    mk.style.animationDelay = '0ms';
+    const hit = S('rect', { x: m.l + slot * i, y: m.t, width: slot, height: ih, class: 'hit' }, svg);
+    bind(hit, mk, () => o.tip(i));
+    const every = o.every && W < 700 ? o.every * 2 : o.every;
+    if (!every || i % every === 0) T(svg, x + bw / 2, H - 8, labels[i], 'lbl', 'middle');
+    if (o.show && o.show(i)) T(svg, x + bw / 2, y - 6, (o.vf || fmt)(v), 'val', 'middle');
+  });
+}
+function hbars(el, labels, vals, o) {
+  el.innerHTML = '';
+  const row = o.row || 26, W = fitW(el, 380, 900), m = { t: 2, r: o.r || 92, b: 2, l: o.l || 120 }, H = m.t + m.b + row * vals.length;
+  const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': o.aria }, el);
+  const iw = W - m.l - m.r, max = o.max || Math.max(...vals, 1e-9);
+  vals.forEach((v, i) => {
+    const y = m.t + row * i, bh = Math.min(18, row - 10), by = y + (row - bh) / 2, w = Math.max(2, iw * v / max);
+    const mk = S('path', { d: rRight(m.l, by, w, bh, 4), class: 'mk grow h ' + (o.cls ? o.cls(i) : 'bar-t') + (o.hl === i ? ' hl' : '') }, svg);
+    mk.style.animationDelay = '0ms';
+    T(svg, m.l - 10, by + bh / 2 + 4, labels[i], 'lbl', 'end');
+    T(svg, m.l + w + 8, by + bh / 2 + 4, (o.vf || fmt)(v, i), 'val');
+    const hit = S('rect', { x: 0, y, width: W, height: row, class: 'hit' }, svg);
+    bind(hit, mk, () => o.tip(i), o.click ? () => o.click(i) : null);
+  });
+  S('line', { x1: m.l, x2: m.l, y1: 0, y2: H, class: 'bl' }, svg);
+}
+function lineChart(el, labels, series, o) {
+  el.innerHTML = '';
+  const W = fitW(el, 340, 1200), H = W < 700 ? 240 : 270, m = { t: 26, r: 18, b: 30, l: 64 };
+  const nice4 = v => { const p = Math.pow(10, Math.floor(Math.log10(v || 1))); for (const k of [1, 1.2, 1.6, 2, 2.4, 3, 4, 6, 8, 10]) if (k * p >= v) return k * p; return 10 * p; };
+  const fc = o.fc || null, n = labels.length, nf = fc ? fc.v.length : 0, N = n + nf;
+  const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': o.aria + (fc ? ', with a 3-month forecast' : '') }, el);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, max = nice4(Math.max(...series.flatMap(s => s.v), ...(fc ? fc.hi : [])));
+  const X = i => N === 1 ? m.l + iw / 2 : m.l + iw * i / (N - 1), Y = v => m.t + ih - ih * Math.max(0, v) / max;
+  if (fc) S('rect', { x: X(n - 1), y: m.t, width: X(N - 1) - X(n - 1) + 6, height: ih, class: 'fczone' }, svg);
+  for (let i = 0; i <= 4; i++) { const y = m.t + ih - ih * i / 4; S('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, class: i ? 'gl' : 'bl' }, svg); T(svg, m.l - 10, y + 4, o.yf(max * i / 4), 'lbl', 'end'); }
+  const labs = labels.concat(fc ? fc.labels : []), step = Math.max(1, Math.ceil(N / (W < 700 ? 4 : 8)));
+  labs.forEach((l, i) => { if (i % step === 0 || i === N - 1) T(svg, X(i), H - 8, l, 'lbl', 'middle'); });
+  series.forEach((s, si) => {
+    const pts = s.v.map((v, i) => X(i) + ',' + Y(v));
+    if (si === 0 && n > 1) S('path', { d: 'M' + pts.join(' L') + ` L${X(n - 1)},${m.t + ih} L${m.l},${m.t + ih} Z`, class: 'ar' }, svg);
+    S('path', { d: 'M' + pts.join(' L'), class: 'ln' + (si ? ' c2' : '') }, svg);
+    if (n === 1) S('circle', { cx: X(0), cy: Y(s.v[0]), r: 5, class: 'dt' + (si ? ' c2' : '') }, svg);
+  });
+  const v0 = series[0].v, peak = v0.indexOf(Math.max(...v0));
+  if (fc) {
+    const p0 = [X(n - 1), Y(v0[n - 1])];
+    const top = [p0, ...fc.hi.map((v, i) => [X(n + i), Y(v)])], bot = fc.lo.map((v, i) => [X(n + i), Y(v)]).reverse();
+    S('path', { d: 'M' + top.concat(bot).map(p => p.join(',')).join(' L') + ' Z', class: 'fcband' }, svg);
+    S('path', { d: 'M' + [p0, ...fc.v.map((v, i) => [X(n + i), Y(v)])].map(p => p.join(',')).join(' L'), class: 'ln fc' }, svg);
+    fc.v.forEach((v, i) => S('circle', { cx: X(n + i), cy: Y(v), r: 3.5, class: 'dt fc' }, svg));
+    T(svg, X(N - 1) - 2, Y(fc.hi[nf - 1]) - 8, 'Forecast ' + o.vf(fc.v[nf - 1]), 'val', 'end');
+  }
+  const marks = n > 1 ? [0, peak, n - 1].filter((v, i, a) => a.indexOf(v) === i) : [0];
+  marks.forEach(i => {
+    S('circle', { cx: X(i), cy: Y(v0[i]), r: 4.5, class: 'dt' }, svg);
+    if (fc && i === n - 1 && i !== peak) return;
+    const anchor = N === 1 ? 'middle' : i === 0 ? 'start' : i === N - 1 ? 'end' : 'middle';
+    const below = i === n - 1 && i !== peak && Math.abs(i - peak) <= 3;
+    T(svg, X(i) + (N > 1 && i === 0 ? 6 : N > 1 && i === N - 1 ? -6 : 0), Y(v0[i]) + (below ? 22 : -12), (i === peak && n > 1 ? 'Peak ' : '') + o.vf(v0[i]), 'val', anchor);
+  });
+  const xh = S('line', { y1: m.t, y2: m.t + ih, class: 'xh', visibility: 'hidden' }, svg);
+  const hd = series.map((s, si) => S('circle', { r: 5.5, class: 'dt' + (si ? ' c2' : ''), visibility: 'hidden' }, svg));
+  const hf = S('circle', { r: 5.5, class: 'dt fc', visibility: 'hidden' }, svg);
+  const hit = S('rect', { x: m.l - 10, y: m.t, width: iw + 20, height: ih, class: 'hit' }, svg);
+  const idx = e => { const r = svg.getBoundingClientRect(), sx = (e.clientX - r.left) * W / r.width; return N === 1 ? 0 : Math.max(0, Math.min(N - 1, Math.round((sx - m.l) / iw * (N - 1)))); };
+  const place = i => {
+    xh.setAttribute('x1', X(i)); xh.setAttribute('x2', X(i)); xh.setAttribute('visibility', 'visible');
+    const isF = i >= n;
+    hd.forEach((c, si) => { c.setAttribute('visibility', isF ? 'hidden' : 'visible'); if (!isF) { c.setAttribute('cx', X(i)); c.setAttribute('cy', Y(series[si].v[i])); } });
+    hf.setAttribute('visibility', isF ? 'visible' : 'hidden'); if (isF) { hf.setAttribute('cx', X(i)); hf.setAttribute('cy', Y(fc.v[i - n])); }
+    return isF ? o.fcTip(i - n) : o.tip(i);
+  };
+  hit.addEventListener('mousemove', e => { if (lastPtr !== 'mouse') return; tipShow(e, place(idx(e))); });
+  const hide = () => { xh.setAttribute('visibility', 'hidden'); hd.forEach(c => c.setAttribute('visibility', 'hidden')); hf.setAttribute('visibility', 'hidden'); tipHide(); };
+  hit.addEventListener('mouseleave', () => { if (lastPtr === 'mouse') hide(); });
+  const showAt = i => { const h = place(i); tipAt(i >= n ? hf : hd[0], h); };
+  let ki = n - 1;
+  hit.setAttribute('tabindex', '0'); hit.setAttribute('role', 'slider'); hit.setAttribute('aria-label', o.aria + '. Use left and right arrows to read each month' + (o.click ? ', Enter to zoom in' : ''));
+  hit.addEventListener('focus', () => { if (lastPtr === 'kbd' || lastPtr === 'mouse') showAt(ki); }); hit.addEventListener('blur', () => { if (lastPtr === 'kbd' || lastPtr === 'mouse') hide(); });
+  hit.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); ki = Math.max(0, Math.min(N - 1, ki + (e.key === 'ArrowRight' ? 1 : -1))); showAt(ki); }
+    if ((e.key === 'Enter' || e.key === ' ') && o.click && ki < n) { e.preventDefault(); hide(); o.click(ki); }
+  });
+  let tapI = -1;
+  hit.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') return; const i = idx(e); if (i !== tapI) { tapI = i; hit._skip = true; showAt(i); } });
+  if (o.click) hit.addEventListener('click', e => { if (hit._skip) { hit._skip = false; return; } const i = idx(e); tapI = -1; if (i >= n) return; hide(); o.click(i); });
+}
+let clockDone = false;
+function clock(hours) {
+  const el = document.getElementById('clock'); el.innerHTML = '';
+  const W = 460, c = W / 2, r0 = 92, r1 = 196;
+  const svg = S('svg', { viewBox: `-34 -6 ${W + 68} ${W + 12}`, role: 'img', 'aria-label': 'Orders by hour of day shown as a 24-hour clock' }, el);
+  const max = Math.max(...hours, 1), total = hours.reduce((a, b) => a + b, 0);
+  [0.25, 0.5, 0.75, 1].forEach(f => S('circle', { cx: c, cy: c, r: r0 + (r1 - r0) * f, class: 'ring' }, svg));
+  const big = document.getElementById('clockBig'), small = document.getElementById('clockSmall');
+  const reset = () => { big.textContent = fmt(total); small.innerHTML = 'orders by hour<br>point at an hour'; };
+  reset();
+  hours.forEach((v, h) => {
+    const a0 = (h / 24) * 2 * Math.PI - Math.PI / 2 + 0.018, a1 = ((h + 1) / 24) * 2 * Math.PI - Math.PI / 2 - 0.018, r = r0 + (r1 - r0) * v / max;
+    const P = (rad, a) => [c + rad * Math.cos(a), c + rad * Math.sin(a)];
+    const [x0, y0] = P(r0, a0), [x1, y1] = P(r, a0), [x2, y2] = P(r, a1), [x3, y3] = P(r0, a1);
+    const w = S('path', { d: `M${x0},${y0} L${x1},${y1} A${r},${r} 0 0 1 ${x2},${y2} L${x3},${y3} A${r0},${r0} 0 0 0 ${x0},${y0} Z`, class: 'wedge', fill: RUSH(h) ? 'var(--saffron)' : 'var(--teal)', tabindex: 0, 'aria-label': `${hr(h)}: ${fmt(v)} orders` }, svg);
+    if (!clockDone && !reduce) {
+      w.style.transformOrigin = `${c}px ${c}px`; w.style.transform = 'scale(0.55)'; w.style.opacity = '0';
+      w.style.transition = `transform .7s cubic-bezier(.2,.8,.2,1) ${h * 22}ms, opacity .4s ease ${h * 22}ms`;
+      requestAnimationFrame(() => requestAnimationFrame(() => { w.style.transform = 'scale(1)'; w.style.opacity = '1'; }));
+    }
+    const show = () => { big.textContent = fmt(v); small.innerHTML = `orders at ${hr(h)}<br>${(100 * v / (total || 1)).toFixed(1)}% of the day`; };
+    w.addEventListener('mouseenter', show); w.addEventListener('focus', show); w.addEventListener('mouseleave', reset); w.addEventListener('blur', reset);
+  });
+  clockDone = true;
+  [0, 6, 12, 18].forEach(h => { const a = (h / 24) * 2 * Math.PI - Math.PI / 2, rr = r1 + 18; T(svg, c + rr * Math.cos(a), c + rr * Math.sin(a) + 4, ['Midnight', '6 AM', 'Noon', '6 PM'][h / 6], 'hourlbl', 'middle'); });
+}
+function heatmap(el, flat) {
+  el.innerHTML = '';
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const compact = el.clientWidth && el.clientWidth < 420, B = compact ? 3 : 1, cols = 24 / B;   // phones: 3-hour blocks
+  const W = compact ? fitW(el, 320, 560) : fitW(el, 420, 820), m = { t: 6, l: 40, r: 4, b: 24 }, cw = (W - m.l - m.r) / cols, ch = compact ? 30 : 26, H = m.t + ch * 7 + m.b;
+  const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Orders by day of week and hour. The numbers are in the table below the chart.' }, el);
+  const cell = (d, c) => { let s = 0; for (let k = 0; k < B; k++) s += flat[d * 24 + c * B + k]; return s; };
+  let max = 1; for (let d = 0; d < 7; d++) for (let c = 0; c < cols; c++) max = Math.max(max, cell(d, c));
+  const steps = ['--seq-0', '--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5'];
+  const slot = c => B === 1 ? hr(c) : `${hr(c * B)}–${hr((c * B + B) % 24)}`;
+  for (let d = 0; d < 7; d++) {
+    T(svg, m.l - 8, m.t + ch * d + ch / 2 + 4, days[d], 'lbl', 'end');
+    for (let c = 0; c < cols; c++) {
+      const v = cell(d, c), k = Math.min(5, Math.floor((v / max) * 5.999));
+      const r = S('rect', { x: m.l + cw * c + 1, y: m.t + ch * d + 1, width: cw - 2, height: ch - 2, rx: 3, fill: `var(${steps[k]})`, class: 'mk' }, svg);
+      bind(r, r, () => `<b>${days[d]}, ${slot(c)}</b><br>${fmt(v)} orders`, null, { noFocus: true });
+    }
+  }
+  (compact ? [0, 2, 4, 6] : [0, 3, 6, 9, 12, 15, 18, 21]).forEach(c => T(svg, m.l + cw * c + cw / 2, H - 6, hr(c * B).replace(' ', ''), 'lbl', 'middle'));
+  const lg = document.createElement('div'); lg.className = 'heat-legend';
+  lg.innerHTML = 'Fewer orders <span class="ramp">' + steps.map(s => `<i style="background:var(${s})"></i>`).join('') + '</span> More orders';
+  el.appendChild(lg);
+  table(el, ['Day', ...[0, 3, 6, 9, 12, 15, 18, 21].map(h => hr(h) + '–' + hr((h + 3) % 24))],
+    days.map((dn, d) => [dn, ...[0, 1, 2, 3, 4, 5, 6, 7].map(c => { let s = 0; for (let k = 0; k < 3; k++) s += flat[d * 24 + c * 3 + k]; return fmt(s); })]), [1, 2, 3, 4, 5, 6, 7, 8]);
+}
+function spark(vals, m0, m1) {
+  const W = 120, H = 30, max = Math.max(...vals), min = Math.min(...vals), n = vals.length;
+  const X = i => (i / (n - 1)) * W, Y = v => H - 3 - (H - 8) * (v - min) / ((max - min) || 1);
+  const all = vals.map((v, i) => X(i) + ',' + Y(v)).join(' L'), sel = vals.slice(m0, m1 + 1).map((v, i) => X(i + m0) + ',' + Y(v)).join(' L');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">` +
+    `<path d="M${all} L${W},${H} L0,${H} Z" fill="var(--blue)" opacity=".07"/><path d="M${all}" fill="none" stroke="var(--border)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>` +
+    (m1 > m0 ? `<path d="M${sel}" fill="none" stroke="var(--blue)" stroke-width="2" vector-effect="non-scaling-stroke"/>` : '') + '</svg>';
+}
+function countUp(el, to, f) {
+  const from = +(el.dataset.v || 0); el.dataset.v = to;
+  if (reduce || from === to) { el.textContent = f(to); return; }
+  const t0 = performance.now(), dur = 420;
+  const step = t => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = f(from + (to - from) * e); if (p < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+// ---------------- definitions + headline ----------------
+let REC_TARGETS = [];
+const DEF = {
+  rev: '<b>Revenue</b><br>Amount customers paid for delivered orders, after coupon discounts and including the delivery fee. Cancelled orders are not counted.',
+  aov: '<b>Average order</b><br>Revenue divided by the number of delivered orders (average order value, AOV).',
+  late: '<b>Late delivery</b><br>An order that reached the customer after the promised time shown in the app (30 to 45 minutes).',
+  rating: '<b>Food rating</b><br>Average of the 1 to 5 star food ratings customers gave after delivery.',
+  status: '<b>Customer status</b><br>Active: ordered in the last 30 days. At risk: last order 31 to 90 days ago. Churned: no order for over 90 days.'
+};
+const info = k => `<button class="info" type="button" data-def="${k}" aria-label="What does this mean?">ⓘ</button>`;
+function pickHeadline(A, B, rush) {
+  const { city, cmp, m0, m1 } = st, R = s => `<span class="rush">${s}</span>`;
+  if (city === 'All') return `Two rushes a day bring in ${R(rush.toFixed(0) + '%')} of all orders`;
+  if (B) {
+    const x = A.r / (B.r || 1);
+    return x >= 1 ? `${cityName(city)} earns ${R(x.toFixed(1) + '×')} the revenue of ${cityName(cmp)}` : `${cityName(cmp)} earns ${R((1 / x).toFixed(1) + '×')} the revenue of ${cityName(city)}`;
+  }
+  const cand = [];
+  if (m1 - m0 >= 5) {
+    const a = (A.mr[m0] + A.mr[m0 + 1] + A.mr[m0 + 2]) / 3, b = (A.mr[m1] + A.mr[m1 - 1] + A.mr[m1 - 2]) / 3;
+    if (a > 0 && b / a >= 1.4) cand.push([80, `${cityName(city)} revenue grew ${R((b / a).toFixed(1) + '×')} in ${m1 - m0 + 1} months`]);
+  }
+  const peers = isSt(city) ? STATES.map(s => 'st:' + s) : CITIES, kind = isSt(city) ? 'state' : 'city';
+  const all = peers.map(c => [c, agg(c, m0, m1)]).filter(p => p[0] === city || p[1].o >= 400);
+  const rank = (f, hi) => all.slice().sort((p, q) => hi ? f(q[1]) - f(p[1]) : f(p[1]) - f(q[1])).findIndex(p => p[0] === city);
+  const cod = X => X.pay[METHODS.indexOf('COD')] / (X.pay.reduce((s, v) => s + v, 0) || 1);
+  if (rank(X => X.late, true) === 0) cand.push([90, `${cityName(city)} has the most late deliveries of any ${kind}: ${R(A.late.toFixed(1) + '%')}`]);
+  if (rank(X => X.late, false) === 0) cand.push([85, `${cityName(city)} delivers on time more often than any other ${kind}`]);
+  if (rank(X => X.aov, true) === 0) cand.push([75, `${cityName(city)} has the biggest average order of any ${kind}: ${R(inr(A.aov))}`]);
+  if (rank(X => cod(X), true) === 0) cand.push([70, `${cityName(city)} pays cash on delivery more than any other ${kind}: ${R((100 * cod(A)).toFixed(1) + '%')}`]);
+  if (rank(X => X.r, true) === 0) cand.push([72, `${cityName(city)} is the biggest market, with ${R(money(A.r))} in revenue`]);
+  if (rank(X => X.rating, true) === 0) cand.push([68, `${cityName(city)} has the best-rated food of any ${kind}: ${R(A.rating.toFixed(2) + '★')}`]);
+  cand.push([50, `In ${cityName(city)}, two rushes a day bring in ${R(rush.toFixed(0) + '%')} of orders`]);
+  return cand.sort((p, q) => q[0] - p[0])[0][1];
+}
+
+// ---------------- render ----------------
+function render() {
+  const { city, cmp, m0, m1 } = st;
+  const A = agg(city, m0, m1), B = cmp ? agg(cmp, m0, m1) : null;
+  const len = m1 - m0 + 1, p0 = m0 - len, prev = p0 >= 0 ? agg(city, p0, m0 - 1) : null;
+  const rangeTxt = m0 === m1 ? mlong(M[m0]) : `${mlong(M[m0])} to ${mlong(M[m1])}`;
+  const where = city === 'All' ? 'Across India' : 'In ' + cityName(city);
+  document.body.classList.toggle('cmp-on', !!cmp);
+  document.getElementById('reset').classList.toggle('show', !!(city !== 'All' || cmp || m0 !== 0 || m1 !== NM - 1 || st.cuisine));
+  updateRangeUI();
+
+  // ---------- hero ----------
+  const tot = A.h.reduce((a, b) => a + b, 0) || 1;
+  const rush = 100 * A.h.reduce((a, v, h) => a + (RUSH(h) ? v : 0), 0) / tot;
+  const pk = PEAKH.reduce((a, h) => a + A.lh[h], 0) / (PEAKH.reduce((a, h) => a + A.dh[h], 0) || 1) * 100;
+  const offL = A.lh.reduce((a, v, h) => a + (PEAKH.includes(h) ? 0 : v), 0), offD = A.dh.reduce((a, v, h) => a + (PEAKH.includes(h) ? 0 : v), 0);
+  const off = 100 * offL / (offD || 1);
+  document.getElementById('crumb').textContent = `${cityName(city)}${cmp ? ' vs ' + cityName(cmp) : ''} · ${rangeTxt}`;
+  const delta = (cur, old, goodUp, unit) => {
+    if (!prev || !old) return '';
+    const ch = unit === 'pt' ? cur - old : 100 * (cur / old - 1);
+    const cls = Math.abs(ch) < 0.05 ? 'flat' : (ch > 0) === goodUp ? 'up' : 'down';
+    return `<span class="d ${cls}">${ch > 0 ? '▲' : ch < 0 ? '▼' : ''} ${Math.abs(ch).toFixed(1)}${unit === 'pt' ? ' pt' : '%'}</span><span>vs prior ${len} mo</span>`;
+  };
+  const sR = A.mr, sO = A.mo, sA = A.mr.map((v, i) => A.md[i] ? v / A.md[i] : 0), sL = A.ml.map((v, i) => A.md[i] ? 100 * v / A.md[i] : 0),
+        sF = A.mrs.map((v, i) => A.mrn[i] ? v / A.mrn[i] : 0), sC = A.mo.map((v, i) => v ? 100 * (v - A.md[i]) / v : 0);
+  const kp = [
+    ['Revenue', 'rev', money(A.r), delta(A.r, prev && prev.r, true), sR, B && money(B.r), false, fmt(A.d) + ' delivered orders'],
+    ['Orders', null, fmt(A.o), delta(A.o, prev && prev.o, true), sO, B && fmt(B.o), false, 'placed in ' + (len === NM ? NM + ' months' : len + (len > 1 ? ' months' : ' month'))],
+    ['Avg order value', 'aov', inr(A.aov), delta(A.aov, prev && prev.aov, true), sA, B && inr(B.aov), false, 'per delivered order'],
+    ['Late deliveries', 'late', A.late.toFixed(1) + '%', delta(A.late, prev && prev.late, false, 'pt'), sL, B && B.late.toFixed(1) + '%', A.late > 22, 'avg ' + A.mins.toFixed(1) + ' min delivery'],
+    ['Food rating', 'rating', A.rating.toFixed(2) + ' ★', delta(A.rating, prev && prev.rating, true), sF, B && B.rating.toFixed(2) + ' ★', false, fmt(A.rn) + ' ratings'],
+    ['Cancellation rate', null, A.cancel.toFixed(1) + '%', delta(A.cancel, prev && prev.cancel, false, 'pt'), sC, B && B.cancel.toFixed(1) + '%', false, fmt(A.o - A.d) + ' orders cancelled'],
+  ];
+  document.getElementById('kpis').innerHTML = kp.map(k => `<div class="kpi${k[6] ? ' alert' : ''}"><div class="kl">${k[0]}${k[1] ? info(k[1]) : ''}</div><div class="kv">${k[2]}</div>` +
+    `<div class="kd">${k[3] || '<span>' + k[7] + '</span>'}</div>` + (B ? `<div class="kc"><span style="color:var(--purple)">■</span> ${cityName(cmp)}: <b>${k[5]}</b></div>` : '') + spark(k[4], m0, m1) + '</div>').join('');
+  document.getElementById('sub-hour').textContent = `${rush.toFixed(0)}% of orders arrive in the 7 rush hours (orange)`;
+  vbars(document.getElementById('c-hour'), A.h.map((_, h) => hr(h).replace(' ', '')), A.h, {
+    w: 'fit', h: 220, bw: 20, every: 3, aria: 'Orders by hour of day', yf: v => v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k' : fmt(v),
+    cls: h => RUSH(h) ? 'bar-s' : 'bar-t', show: h => h === A.h.indexOf(Math.max(...A.h)), vf: v => fmt(v),
+    tip: h => `<b>${hr(h)}</b><br>${fmt(A.h[h])} orders (${(100 * A.h[h] / tot).toFixed(1)}%)`
+  });
+
+  // ---------- recommendations ----------
+  const segC = DATA.cust[city].seg;
+  const lateByH = A.lh.map((v, h) => A.dh[h] ? 100 * v / A.dh[h] : 0);
+  const worstH = PEAKH.reduce((a, h) => lateByH[h] > lateByH[a] ? h : a, PEAKH[0]);
+  const cps = CODES.map((c, i) => [c, A.cpn[i], A.cpd[i], A.cpr[i]]).filter(r => r[1] >= 15 && r[2] > 0).map(r => [...r, r[3] / r[2]]).sort((a, b) => a[4] - b[4]);
+  const vI = VEH.indexOf('Bicycle'), bikeLate = A.vn[vI] ? 100 * A.vl[vI] / A.vn[vI] : 0;
+  const risk = riskList(city, m0, m1);
+  const icons0 = {
+    rider: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h3l2 6M5.5 17.5L9 9h6l3.5 8.5"/></svg>',
+    user: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    tag: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
+    store: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l1.5-5h15L21 9M4 9v11h16V9M3 9h18"/></svg>',
+    star: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></svg>',
+    spark: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg>'
+  };
+  const icons = Object.fromEntries(Object.entries(icons0).map(([k, v]) => [k, v.replace('width="16" height="16"', 'width="14" height="14"')]));
+  const badge = p => p === 'high' ? '<span class="badge bad">High</span>' : p === 'med' ? '<span class="badge warn">Medium</span>' : '<span class="badge good">Quick win</span>';
+  const recs = [];
+  recs.push(['rider', 'high', `Add riders at ${hr(worstH)}`, `${lateByH[worstH].toFixed(0)}% of ${hr(worstH)} orders arrive late, against ${off.toFixed(0)}% at other hours. Extra riders or order batching at this hour lifts ratings the most.`, { tab: 't-de', box: 'c-late', hl: ['late', worstH] }]);
+  recs.push(['user', 'high', `Win back ${fmt(segC.risk)} at-risk customers`, `They last ordered 31 to 90 days ago. A targeted offer now is cheaper than re-acquiring them after they churn.`, { tab: 't-cu', box: 'c-seg', hl: ['seg', 1] }]);
+  if (cps.length) recs.push(['tag', 'med', `Review the ${cps[0][0]} coupon`, `It returns only ₹${cps[0][4].toFixed(2)} of revenue per ₹1 of discount, the weakest of the coupons used in this period.`, { tab: 't-co', box: 'c-cpn', hl: ['cpn', cps[0][0]] }]);
+  if (A.vn[vI]) recs.push(['rider', 'med', 'Move bicycle riders to short trips', `Bicycle riders are late ${bikeLate.toFixed(0)}% of the time. Short-distance zones or off-peak shifts suit them better.`, { tab: 't-de', box: 'c-veh', hl: ['veh', 'Bicycle'] }]);
+  if (risk.length) recs.push(['star', 'med', `Coach ${risk.length} high-earning restaurant${risk.length > 1 ? 's' : ''}`, `${risk[0].n}${risk.length > 1 ? ' and others' : ''} sit in the top 20% for revenue but are rated below 3.8, a quality risk to a big income stream.`, { tab: 't-re', box: 'c-risk' }]);
+  recs.push(['spark', 'quick', `Activate ${fmt(segC.never)} sign-ups`, `These people created an account but never ordered. A first-order nudge is the cheapest growth available.`, { tab: 't-cu', box: 'c-seg', hl: ['seg', 3] }]);
+  REC_TARGETS = recs.slice(0, 5).map(r => r[4]);
+  document.getElementById('c-recs').innerHTML = recs.slice(0, 5).map((r, i) => `<li><span class="ico">${icons[r[0]]}</span><div class="rx"><b>${r[2]}</b><span title="${r[3]}">${r[3].split('. ')[0].replace(/\.$/, '')}.</span></div><div class="rr">${badge(r[1])}<button class="go" type="button" data-rec="${i}">View data</button></div></li>`).join('');
+
+  // ---------- monthly ----------
+  const cut = MTD && m1 === NM - 1 && m1 > m0 ? 1 : 0, me = m1 - cut;   // the running month is reported as 'so far', not as a dip
+  const labels = M.slice(m0, me + 1).map(ml), vA = A.mr.slice(m0, me + 1), vB = B ? B.mr.slice(m0, me + 1) : null;
+  const first = vA.findIndex(v => v > 0), peakI = vA.indexOf(Math.max(...vA));
+  document.getElementById('tk-month').innerHTML = vA.length > 1
+    ? `Revenue went from ${L(vA[first])} in ${labels[first]} to ${L(vA[vA.length - 1])} in ${labels[labels.length - 1]} (<b>${(vA[vA.length - 1] / vA[first]).toFixed(1)}×</b>). Best month: ${labels[peakI]} at ${L(vA[peakI])}.`
+    : `Revenue in ${labels[0]}: <b>${L(vA[0])}</b>.`;
+  const useIdx = B && st.idx && vA.length > 1;
+  const base = (v) => { const f = v.find(x => x > 0) || 1; return v.map(x => 100 * x / f); };
+  const iA = useIdx ? base(vA) : vA, iB = useIdx ? base(vB) : vB;
+  document.getElementById('lg-month').innerHTML = B ? `<span class="key"><i class="sw ln" style="background:var(--teal)"></i>${cityName(city)}</span><span class="key"><i class="sw ln" style="background:var(--violet)"></i>${cityName(cmp)} (dashed)</span>` +
+    `<span class="seg" role="group" aria-label="Chart scale"><button type="button" data-idx="0" aria-pressed="${!st.idx}">Revenue ₹</button><button type="button" data-idx="1" aria-pressed="${!!st.idx}">Growth index</button></span>` +
+    (useIdx ? `<span class="note" style="margin:0">Index: first month = 100, so cities of different size compare fairly.</span>` : '') : '';
+  let fc = null;
+  const fe = me;
+  if (!B && m1 === NM - 1 && fe - m0 >= 5) {
+    const k = Math.min(12, fe - m0 + 1), ys = A.mr.slice(fe - k + 1, fe + 1), xm = (k - 1) / 2, ym = ys.reduce((a, b) => a + b, 0) / k;
+    const sxx = ys.reduce((a, _, i) => a + (i - xm) ** 2, 0), b1 = ys.reduce((a, y, i) => a + (i - xm) * (y - ym), 0) / sxx, b0 = ym - b1 * xm;
+    const sd = Math.sqrt(ys.reduce((a, y, i) => a + (y - (b0 + b1 * i)) ** 2, 0) / Math.max(1, k - 2));
+    const hs = [1, 2, 3];
+    const v = hs.map(h => b0 + b1 * (k - 1 + h)), w = hs.map(h => 1.28 * sd * Math.sqrt(1 + 1 / k + ((k - 1 + h - xm) ** 2) / sxx));
+    const fm = [1, 2, 3].map(j => addMonths(M[fe], j));
+    fc = { v, lo: v.map((x, i) => x - w[i]), hi: v.map((x, i) => x + w[i]), labels: fm.map(m => plainMonth(m)), longs: fm.map(m => plainMonth(m, true)), k };
+  }
+  if (fc) document.getElementById('lg-month').innerHTML = `<span class="key"><i class="sw ln" style="background:var(--blue)"></i>Actual</span><span class="key"><i class="sw ln" style="background:var(--blue);opacity:.5"></i>Forecast, linear trend of the last ${fc.k} full months (shaded = 80% range)</span>` + (cut ? `<span class="note" style="margin:0">${plainMonth(LASTM, true)} so far: <b>${L(A.mr[NM - 1])}</b> in ${MTD.days} of ${MTD.monthDays} days, on pace for ${L(A.mr[NM - 1] * MTD.monthDays / MTD.days)}</span>` : '');
+  lineChart(document.getElementById('c-month'), labels, B ? [{ v: iA }, { v: iB }] : [{ v: vA }], { fc,
+    fcTip: j => `<b>${fc.longs[j]} (forecast)</b><br>${inr(fc.v[j])}<br>80% range ${L(fc.lo[j])} – ${L(fc.hi[j])}`,
+    aria: 'Monthly revenue', yf: useIdx ? (v => v.toFixed(0)) : L, vf: useIdx ? (v => v.toFixed(0)) : L,
+    tip: i => `<b>${mlong(M[m0 + i])}</b><br>${B ? cityName(city) + ': ' : 'Revenue '}${inr(vA[i])}${useIdx ? ' (index ' + iA[i].toFixed(0) + ')' : ''}` + (B ? `<br>${cityName(cmp)}: ${inr(vB[i])}${useIdx ? ' (index ' + iB[i].toFixed(0) + ')' : ''}` : `<br>${fmt(A.md[m0 + i])} delivered orders`) +
+      (i ? `<br>${vA[i] >= vA[i - 1] ? '▲' : '▼'} ${Math.abs(100 * (vA[i] / vA[i - 1] - 1)).toFixed(1)}% vs previous month` : '') + (vA.length > 1 ? '<br><i>Click or tap again to zoom into this month</i>' : ''),
+    click: i => { st.m0 = st.m1 = m0 + i; render(); toast(`Showing ${mlong(M[m0 + i])}`); }
+  });
+  table(document.getElementById('c-month'), B ? ['Month', cityName(city), cityName(cmp)] : ['Month', 'Delivered orders', 'Revenue'],
+    labels.map((l, i) => B ? [l, inr(vA[i]), inr(vB[i])] : [l, fmt(A.md[m0 + i]), inr(vA[i])]), [1, 2]);
+
+  // ---------- heatmap ----------
+  const dayTot = [0, 1, 2, 3, 4, 5, 6].map(d => A.hm.slice(d * 24, d * 24 + 24).reduce((a, b) => a + b, 0));
+  const we = (dayTot[5] + dayTot[6]) / 2, wd = (dayTot[0] + dayTot[1] + dayTot[2] + dayTot[3]) / 4;
+  const bi = A.hm.indexOf(Math.max(...A.hm));
+  document.getElementById('tk-heat').innerHTML = `Saturdays and Sundays bring <b>${(100 * (we / wd - 1)).toFixed(0)}% more orders</b> than an average Monday to Thursday. Busiest slot: ${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][Math.floor(bi / 24)]} at ${hr(bi % 24)}.`;
+  document.getElementById('sub-heat').textContent = `Weekends average ${(100 * (we / wd - 1)).toFixed(0)}% more orders than Mon–Thu · darker = more orders`;
+  heatmap(document.getElementById('c-heat'), A.hm);
+
+  // ---------- restaurants (top list) ----------
+  const R = restRanking(city, m0, m1);
+  const cuisPill = st.cuisine ? `<span class="pill">${st.cuisine}<button type="button" aria-label="Clear cuisine filter" data-clear="1">✕</button></span>` : '';
+  document.getElementById('cuisinePill').innerHTML = cuisPill ? `<div style="margin:-6px 0 8px">${cuisPill}</div>` : '';
+  document.getElementById('cuisinePill2').innerHTML = cuisPill;
+  document.getElementById('tk-top').textContent = `${where}, by revenue from delivered orders${st.cuisine ? ' in ' + st.cuisine : ''}.`;
+  document.getElementById('c-top').innerHTML = R.slice(0, st.topN).map((t, i) =>
+    `<li><span class="rk">${i + 1}</span><span class="nm" title="${t.n}">${t.n}<small>${DATA.cube[city] ? '' : t.c + ' · '}${CUIS[t.q]}</small></span><span class="rv">${L(t.r)}</span></li>`).join('') || '<li>No restaurants match.</li>';
+
+  // ---------- city bars ----------
+  const sc = scopeRows(city), pv = topPlaces(sc, k => agg(k, m0, m1).r, 12), allRev = pv.vals.reduce((a, b) => a + b, 0);
+  const homeSt = stateOf(city);
+  document.getElementById('h-city').textContent = sc.kind === 'state' ? 'Revenue by state' : 'Revenue by city in ' + homeSt;
+  document.getElementById('tk-city').innerHTML = city === 'All'
+    ? `<b>${pv.labs[0]}</b> leads with ${(100 * pv.vals[0] / allRev).toFixed(1)}% of revenue; the top 5 states bring ${(100 * pv.vals.slice(0, 5).reduce((a, b) => a + b, 0) / allRev).toFixed(0)}%.`
+    : isSt(city) ? (pv.keys.length > 1 ? `<b>${pv.labs[0]}</b> brings ${(100 * pv.vals[0] / allRev).toFixed(0)}% of ${homeSt}'s revenue.` : `${pv.labs[0]} is the only city on the app in ${homeSt}.`)
+    : `<b>${city}</b> brings ${(100 * A.r / allRev).toFixed(1)}% of ${homeSt}'s revenue in this period.`;
+  hbars(document.getElementById('c-city'), pv.labs, pv.vals, {
+    l: 132, aria: sc.kind === 'state' ? 'Revenue by state' : 'Revenue by city', vf: v => L(v),
+    cls: i => !pv.keys[i] ? 'bar-w' : (city === 'All' || isSt(city) || pv.keys[i] === city) ? 'bar-t' : pv.keys[i] === cmp ? 'bar-v' : 'bar-w',
+    tip: i => `<b>${pv.labs[i]}</b><br>Revenue ${inr(pv.vals[i])} (${(100 * pv.vals[i] / allRev).toFixed(1)}%)` + (pv.keys[i] ? `<br><i>Click to filter by ${pv.labs[i]}</i>` : ''),
+    click: i => { const k = pv.keys[i]; if (!k) return; setCity(k === city ? (isSt(k) ? 'All' : 'st:' + homeSt) : k); }
+  });
+
+  // ---------- cuisine ----------
+  const cu = CUIS.map((c, i) => [c, A.cu[i], A.cn[i]]).sort((a, b) => b[1] - a[1]);
+  const big = cu.filter(r => r[2] > 0).map(r => [r[0], r[1] / r[2]]).sort((a, b) => b[1] - a[1])[0];
+  document.getElementById('tk-cuisine').innerHTML = `<b>${cu[0][0]}</b> earns the most. Largest basket: ${big[0]} at ${inr(big[1])} per order.`;
+  hbars(document.getElementById('c-cuisine'), cu.map(r => r[0]), cu.map(r => r[1]), {
+    l: 150, aria: 'Revenue by cuisine', vf: v => L(v),
+    cls: i => !st.cuisine || cu[i][0] === st.cuisine ? 'bar-t' : 'bar-w',
+    tip: i => `<b>${cu[i][0]}</b><br>Revenue ${inr(cu[i][1])}<br>${fmt(cu[i][2])} orders · ${inr(cu[i][1] / (cu[i][2] || 1))} average<br><i>Click to filter restaurants</i>`,
+    click: i => { st.cuisine = st.cuisine === cu[i][0] ? null : cu[i][0]; render(); }
+  });
+
+  // ---------- customers ----------
+  const s = DATA.cust[city].seg;
+  document.getElementById('tk-seg').innerHTML = `Based on each customer's last order before ${AS_OF}${info('status')}. <b>${fmt(s.risk)}</b> customers are at risk and worth a win-back offer now.`;
+  document.getElementById('st-seg').innerHTML = [[s.repeat + '%', 'order again'], [(100 * s.one_time / s.ordering).toFixed(1) + '%', 'ordered only once'], [(100 * s.churned / s.ordering).toFixed(1) + '%', 'have churned'], [fmt(s.never), 'signed up, never ordered']]
+    .map(([n, t]) => `<div><div class="n">${n}</div><div class="t">${t}</div></div>`).join('');
+  const segL = ['Active (last 30 days)', 'At risk (31–90 days)', 'Churned (over 90 days)', 'Never ordered'], segV = [s.active, s.risk, s.churned, s.never];
+  hbars(document.getElementById('c-seg'), segL, segV, { l: 170, r: 70, aria: 'Customers by status', hl: st.hl && st.hl[0] === 'seg' ? st.hl[1] : null, cls: i => i === 1 ? 'bar-s' : 'bar-t', tip: i => `<b>${segL[i]}</b><br>${fmt(segV[i])} customers` });
+  const q = DATA.cust[city].quart, qc = ['var(--seq-5)', 'var(--seq-4)', 'var(--seq-3)', 'var(--seq-2)'];
+  document.getElementById('tk-par').innerHTML = `Customers split into four equal groups by lifetime spend. <b>The top quarter brings ${q[0].toFixed(0)}% of revenue.</b>`;
+  document.getElementById('c-par').innerHTML = `<div class="pareto" role="img" aria-label="Revenue share by customer quarter">${q.map((v, i) => `<div style="flex:${Math.max(v, 3)};background:${qc[i]}">${v >= 6 ? v.toFixed(0) + '%' : ''}</div>`).join('')}</div>` +
+    `<div class="pareto-keys">${['Top 25%', 'Next 25%', 'Next 25%', 'Bottom 25%'].map((t, i) => `<span class="key" style="align-items:flex-start"><i class="sw" style="background:${qc[i]};margin-top:4px"></i><span>${t}<br><b>${q[i]}%</b> of revenue</span></span>`).join('')}</div>` +
+    `<p class="note">Protecting the top quarter with a loyalty programme matters more than discounts for everyone.</p>`;
+  const coh = DATA.cust[city].cohort, c1 = coh.filter(r => r[2] != null), c3 = coh.filter(r => r[4] != null);
+  document.getElementById('tk-coh').innerHTML = `Customers grouped by the month of their first order. On average <b>${(c1.reduce((a, r) => a + r[2], 0) / c1.length).toFixed(0)}%</b> order again the next month and ${(c3.reduce((a, r) => a + r[4], 0) / c3.length).toFixed(0)}% three months later.`;
+  const shade = v => v == null ? 'transparent' : `var(--seq-${Math.min(5, Math.max(0, Math.floor(v / 14)))})`, ink = v => v != null && v >= 42 ? '#fff' : 'var(--ink)';
+  const cohRows = st.cohAll ? coh : coh.slice(-11, -3);
+  document.getElementById('c-coh').innerHTML = `<table class="data cohort"><thead><tr><th>First order month</th><th class="num">New customers</th><th class="num">1 month later</th><th class="num">2 months later</th><th class="num">3 months later</th></tr></thead><tbody>` +
+    cohRows.map(r => `<tr><td>${ml(r[0])}</td><td class="num">${fmt(r[1])}</td>` + [2, 3, 4].map(j => `<td class="cell" style="background:${shade(r[j])};color:${ink(r[j])}">${r[j] == null ? '–' : r[j].toFixed(0) + '%'}</td>`).join('') + '</tr>').join('') + '</tbody></table>' +
+    `<button class="more" type="button" id="cohMore">${st.cohAll ? 'Show the latest 8 complete months' : 'Show all ' + coh.length + ' months'}</button>`;
+  document.getElementById('cohMore').onclick = () => { st.cohAll = !st.cohAll; render(); };
+
+  // ---------- delivery ----------
+  document.getElementById('tk-late').innerHTML = `Rush hours run late most often${info('late')}. Saffron bars mark 1 PM, 8 PM and 9 PM.`;
+  document.getElementById('st-late').innerHTML = [[A.late.toFixed(1) + '%', 'of orders late'], [A.mins.toFixed(1) + ' min', 'average delivery time'], [pk.toFixed(0) + '%', 'late at 1, 8 and 9 PM'], [off.toFixed(0) + '%', 'late at other hours']]
+    .concat(B ? [[B.late.toFixed(1) + '%', cityName(cmp) + ' late']] : []).map(([n, t]) => `<div><div class="n">${n}</div><div class="t">${t}</div></div>`).join('');
+  vbars(document.getElementById('c-late'), lateByH.map((_, h) => hr(h).replace(' ', '')), lateByH, {
+    w: 'fit', h: 240, bw: 34, max: 50, ticks: 5, yf: v => v + '%', every: 3, aria: 'Late delivery percentage by hour',
+    hl: st.hl && st.hl[0] === 'late' ? st.hl[1] : null,
+    cls: h => PEAKH.includes(h) ? 'bar-s' : 'bar-t', show: h => PEAKH.includes(h), vf: v => v.toFixed(0) + '%',
+    tip: h => `<b>${hr(h)}</b><br>${lateByH[h].toFixed(1)}% late<br>${fmt(A.dh[h])} deliveries`
+  });
+  table(document.getElementById('c-late'), ['Hour', 'Deliveries', 'Late %'], lateByH.map((v, h) => [hr(h), fmt(A.dh[h]), v.toFixed(1) + '%']), [1, 2]);
+  const rl = A.rls.map((v, i) => A.rln[i] ? v / A.rln[i] : null), rlL = ['On time', '1–10 min late', '11–20 min late', '20+ min late'];
+  document.getElementById('tk-rate').innerHTML = rl[0] && rl[3] ? `Delivery rating drops from <b>${rl[0].toFixed(1)}★</b> when on time to <b>${rl[3].toFixed(1)}★</b> when over 20 minutes late.` : 'Average delivery rating by how late the order arrived.';
+  vbars(document.getElementById('c-rate'), rlL, rl, { w: 'fit', max: 5, ticks: 5, bw: 64, yf: v => v.toFixed(0) + '★', aria: 'Average delivery rating by lateness', cls: i => i === 0 ? 'bar-t' : 'bar-s', show: () => true, vf: v => v.toFixed(2) + '★', tip: i => `<b>${rlL[i]}</b><br>Average ${rl[i] == null ? '–' : rl[i].toFixed(2)}★<br>${fmt(A.rln[i])} rated orders` });
+  const vk = VEH.map((v, i) => [v, A.vn[i] ? 100 * A.vl[i] / A.vn[i] : 0, A.vn[i] ? A.vm[i] / A.vn[i] : 0, A.vn[i]]).filter(r => r[3]).sort((a, b) => b[1] - a[1]);
+  document.getElementById('tk-veh').innerHTML = `${vk[0][0]} riders are late <b>${vk[0][1].toFixed(0)}%</b> of the time (avg ${vk[0][2].toFixed(1)} min) vs ${vk[vk.length - 1][1].toFixed(0)}% for ${vk[vk.length - 1][0].toLowerCase()} riders.`;
+  hbars(document.getElementById('c-veh'), vk.map(r => r[0]), vk.map(r => r[1]), { l: 80, r: 150, max: 60, hl: st.hl && st.hl[0] === 'veh' ? vk.findIndex(r => r[0] === st.hl[1]) : null, aria: 'Late percentage by rider vehicle', vf: (v, i) => v.toFixed(1) + '% late · ' + vk[i][2].toFixed(1) + ' min', cls: i => i === 0 ? 'bar-s' : 'bar-t', tip: i => `<b>${vk[i][0]}</b><br>${vk[i][1].toFixed(1)}% late<br>Average ${vk[i][2].toFixed(1)} min<br>${fmt(vk[i][3])} deliveries` });
+  renderPartners();
+
+  renderDist(A);
+  renderRFM();
+  renderScorecard();
+  renderChips();
+
+  // ---------- restaurants tab ----------
+  renderScatter(R, risk);
+  renderBoard(R);
+
+  // ---------- coupons & payments ----------
+  const cp = CODES.map((c, i) => [c, A.cpn[i], A.cpd[i], A.cpr[i]]).filter(r => r[1] > 0 && r[2] > 0).map(r => [...r, r[3] / r[2]]).sort((a, b) => b[4] - a[4]);
+  document.getElementById('tk-cpn').innerHTML = cp.length ? `<b>${cp[0][0]}</b> returns ₹${cp[0][4].toFixed(2)} per ₹1 given away; <b>${cp[cp.length - 1][0]}</b> only ₹${cp[cp.length - 1][4].toFixed(2)}.` : 'No coupons were used in this period.';
+  hbars(document.getElementById('c-cpn'), cp.map(r => r[0]), cp.map(r => r[4]), { l: 104, r: 150, hl: st.hl && st.hl[0] === 'cpn' ? cp.findIndex(r => r[0] === st.hl[1]) : null, aria: 'Revenue per rupee of discount by coupon', vf: (v, i) => '₹' + v.toFixed(2) + ' · ' + fmt(cp[i][1]) + ' uses', tip: i => `<b>${cp[i][0]}</b><br>Used ${fmt(cp[i][1])} times<br>Discount given ${inr(cp[i][2])}<br>Revenue ${inr(cp[i][3])}` });
+  const pt = A.pay.reduce((a, b) => a + b, 0) || 1, pay = METHODS.map((m, i) => [m, 100 * A.pay[i] / pt, A.pay[i]]).sort((a, b) => b[1] - a[1]);
+  const pName = { UPI: 'UPI', CARD: 'Card', WALLET: 'Wallet', NETBANKING: 'Net banking', COD: 'Cash on delivery' };
+  document.getElementById('tk-pay').innerHTML = `<b>${pName[pay[0][0]]}</b> carries ${pay[0][1].toFixed(0)}% of payments. Cash on delivery is ${(100 * A.pay[METHODS.indexOf('COD')] / pt).toFixed(1)}%.`;
+  hbars(document.getElementById('c-pay'), pay.map(r => pName[r[0]]), pay.map(r => r[1]), { l: 130, aria: 'Payment method share', vf: v => v.toFixed(1) + '%', cls: i => pay[i][0] === 'COD' ? 'bar-s' : 'bar-t', tip: i => `<b>${pName[pay[i][0]]}</b><br>${fmt(pay[i][2])} payments (${pay[i][1].toFixed(1)}%)` });
+  const codPool = city === 'All' ? CITIES : DATA.states[stateOf(city)];
+  const cod = codPool.map(c => { const X = agg(c, m0, m1), t = X.pay.reduce((a, b) => a + b, 0) || 1; return [c, 100 * X.pay[METHODS.indexOf('COD')] / t, t]; }).filter(r => r[2] >= 150 || r[0] === city).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  document.getElementById('h-cod').textContent = city === 'All' ? 'Cash on delivery: the 12 highest cities' : 'Cash on delivery by city in ' + stateOf(city);
+  document.getElementById('tk-cod').innerHTML = `Cash orders cost more to handle and fail more often. <b>${cod[0][0]}</b> has the highest share at ${cod[0][1].toFixed(1)}%.`;
+  hbars(document.getElementById('c-cod'), cod.map(r => r[0]), cod.map(r => r[1]), { aria: 'Cash on delivery share by city', vf: v => v.toFixed(1) + '%', l: 132, cls: i => city === 'All' || isSt(city) || cod[i][0] === city ? 'bar-t' : 'bar-w', tip: i => `<b>${cod[i][0]}</b><br>${cod[i][1].toFixed(1)}% cash on delivery`, click: i => setCity(cod[i][0] === city ? 'All' : cod[i][0]) });
+
+  refreshCsv();
+  syncHash();
+}
+
+function topPlaces(sc, val, n) {
+  const v = sc.keys.map(val), ord = sc.keys.map((k, i) => i).sort((a, b) => v[b] - v[a]);
+  let keys = ord.map(i => sc.keys[i]), vals = ord.map(i => v[i]);
+  if (keys.length > n) { const rest = vals.slice(n - 1).reduce((a, b) => a + b, 0), nr = keys.length - n + 1;
+    keys = keys.slice(0, n - 1).concat(null); vals = vals.slice(0, n - 1).concat(rest); }
+  const labs = keys.map((k, i) => k ? cityName(k) : `${sc.keys.length - n + 1} other ${sc.kind === 'state' ? 'states' : 'cities'}`);
+  return { keys, vals, labs };
+}
+function restRanking(city, m0, m1) {
+  return DATA.rest.filter(r => inScope(city, r[1]) && (!st.cuisine || CUIS[r[2]] === st.cuisine))
+    .map(r => ({ n: r[0], c: r[1], q: r[2], rt: r[3], rc: r[4], r: r[5].slice(m0, m1 + 1).reduce((a, b) => a + b, 0) }))
+    .sort((a, b) => b.r - a.r);
+}
+function riskList(city, m0, m1) {
+  const all = DATA.rest.map(r => ({ n: r[0], c: r[1], q: r[2], rt: r[3], r: r[5].slice(m0, m1 + 1).reduce((a, b) => a + b, 0) }));
+  const sorted = all.map(x => x.r).sort((a, b) => a - b), cut = sorted[Math.floor(sorted.length * 0.8)];
+  return all.filter(x => x.r >= cut && x.rt < 3.8 && inScope(city, x.c)).sort((a, b) => b.r - a.r);
+}
+function renderScatter(R, risk) {
+  const el = document.getElementById('c-scatter'); el.innerHTML = '';
+  const W = 820, H = 380, m = { t: 14, r: 16, b: 40, l: 66 };
+  const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Restaurant revenue against average rating' }, el);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, maxR = niceMax(Math.max(...R.map(r => r.r), 1)), x0 = 2.5, x1 = 5;
+  const minR = 5000, lg = v => Math.log10(Math.max(v, minR)), X = v => m.l + iw * (Math.max(x0, v) - x0) / (x1 - x0), Y = v => m.t + ih - ih * (lg(v) - lg(minR)) / (lg(maxR) - lg(minR));
+  [minR, 1e4, 3e4, 1e5, 3e5, 1e6, 3e6, 1e7].filter(v => v <= maxR).forEach((v, f) => { const y = Y(v); S('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, class: f ? 'gl' : 'bl' }, svg); T(svg, m.l - 8, y + 4, v >= 1e5 ? L(v) : '₹' + v / 1000 + 'k', 'lbl', 'end'); });
+  [2.5, 3, 3.5, 4, 4.5, 5].forEach(v => { S('line', { x1: X(v), x2: X(v), y1: m.t, y2: m.t + ih, class: 'gl' }, svg); T(svg, X(v), H - 20, v.toFixed(1) + '★', 'lbl', 'middle'); });
+  T(svg, m.l + iw / 2, H - 2, 'Average food rating  ·  revenue on a log scale', 'lbl', 'middle');
+  S('line', { x1: X(3.8), x2: X(3.8), y1: m.t, y2: m.t + ih, stroke: 'var(--saffron)', 'stroke-dasharray': '4 4', 'stroke-width': 1.2 }, svg);
+  T(svg, X(3.8) + 6, m.t + 12, '3.8★ quality line', 'val');
+  const rs = new Set(risk.map(r => r.n + r.c));
+  R.forEach(r => {
+    const flag = rs.has(r.n + r.c);
+    const c = S('circle', { cx: X(r.rt), cy: Y(r.r), r: flag ? 6 : 4.2, fill: flag ? 'var(--saffron)' : 'var(--teal)', 'fill-opacity': flag ? 1 : .55, stroke: 'var(--surface)', 'stroke-width': 1.5, class: 'mk' }, svg);
+    bind(c, c, () => `<b>${r.n}</b><br>${r.c} · ${CUIS[r.q]}<br>Revenue ${inr(r.r)}<br>Rating ${r.rt.toFixed(2)}★ (${fmt(r.rc)} ratings)`);
+  });
+  risk.slice(0, 1).forEach(r => { T(svg, X(r.rt) - 9, Y(r.r) - 9, r.n, 'val', 'end'); });
+  document.getElementById('tk-scatter').innerHTML = `${R.length} restaurants${st.cuisine ? ' serving ' + st.cuisine : ''}. Most cluster around 4★; <b>${risk.length}</b> high earners sit below the 3.8★ line.`;
+  document.getElementById('tk-risk').textContent = 'Top-20% revenue, rated below 3.8★. A drop in quality here hurts the most.';
+  document.getElementById('c-risk').innerHTML = risk.slice(0, 7).map((t, i) => `<li><span class="rk">${i + 1}</span><span class="nm">${t.n}<small>${t.c} · ${CUIS[t.q]} · ${t.rt.toFixed(2)}★</small></span><span class="rv">${L(t.r)}</span></li>`).join('') || '<li>No restaurants on the watch list for this filter.</li>';
+}
+function sortHead(cols, sk, attr) {
+  return '<tr>' + cols.map(([k, lab, num]) => k ? `<th class="sortable${num ? ' num' : ''}"${sk.k === k ? ` aria-sort="${sk.d > 0 ? 'ascending' : 'descending'}"` : ''}><button type="button" ${attr}="${k}">${lab}<span class="arr">${sk.k === k ? (sk.d > 0 ? '▲' : '▼') : '↕'}</span></button></th>` : `<th${num ? ' class="num"' : ''}>${lab}</th>`).join('') + '</tr>';
+}
+function renderBoard(R) {
+  const q = st.q.trim().toLowerCase(), sk = st.sortB, get = { n: r => r.n, c: r => r.c, q: r => CUIS[r.q], rt: r => r.rt, r: r => r.r };
+  const all = R.filter(r => !q || r.n.toLowerCase().includes(q));
+  const list = all.slice().sort((a, b) => { const x = get[sk.k](a), y = get[sk.k](b); return (typeof x === 'string' ? x.localeCompare(y) : x - y) * sk.d; }).slice(0, st.boardN);
+  document.getElementById('tk-board').textContent = `Showing ${list.length} of ${all.length} restaurants · click a column to sort${st.cuisine ? ' · cuisine: ' + st.cuisine : ''}`;
+  document.getElementById('c-board').innerHTML = `<table class="data"><thead>` + sortHead([[null, '#'], ['n', 'Restaurant'], ['c', 'City'], ['q', 'Cuisine'], ['rt', 'Rating', 1], ['r', 'Revenue', 1]], sk, 'data-sb') + `</thead><tbody>` +
+    list.map((r, i) => `<tr><td>${i + 1}</td><td><b>${r.n}</b></td><td>${r.c}</td><td>${CUIS[r.q]}</td><td class="num">${r.rt < 3.8 ? '<span class="badge warn">' + r.rt.toFixed(2) + '★</span>' : r.rt.toFixed(2) + '★'}</td><td class="num"><b>${inr(r.r)}</b></td></tr>`).join('') +
+    (list.length ? '' : '<tr><td colspan="6">No restaurants match. Try another name or clear the cuisine filter.</td></tr>') + '</tbody></table>';
+}
+// ---------- City scorecard (matrix with conditional formatting + drill-through) ----------
+function renderScorecard() {
+  const { m0, m1 } = st, len = m1 - m0 + 1, p0 = m0 - len, ci = METHODS.indexOf('COD');
+  const mk = c => { const X = agg(c, m0, m1), P = p0 >= 0 ? agg(c, p0, m0 - 1) : null, pt = X.pay.reduce((a, b) => a + b, 0) || 1;
+    const k3 = m1 - m0 >= 5 ? 3 : 1; let first = 0, last = 0; for (let i = 0; i < k3; i++) { first += X.mr[m0 + i]; last += X.mr[m1 - i]; }
+    return { c, r: X.r, o: X.o, aov: X.aov, g: P && P.r ? 100 * (X.r / P.r - 1) : (m1 > m0 && first ? 100 * (last / first - 1) : null), late: X.late, rating: X.rating, cod: 100 * X.pay[ci] / pt, cancel: X.cancel }; };
+  const scs = scopeRows(st.city), scope = st.city === 'All' ? 'All' : 'st:' + stateOf(st.city);
+  const rows = scs.keys.map(mk), tot = mk(scope), sk = st.sortS, noun = scs.kind === 'state' ? 'state' : 'city';
+  document.getElementById('h-score').textContent = scs.kind === 'state' ? 'State scorecard' : 'City scorecard: ' + stateOf(st.city);
+  rows.sort((a, b) => (sk.k === 'c' ? cityName(a.c).localeCompare(cityName(b.c)) : (a[sk.k] ?? -1e9) - (b[sk.k] ?? -1e9)) * sk.d);
+  const maxR = Math.max(...rows.map(r => r.r)), lmin = Math.min(...rows.map(r => r.late)), lmax = Math.max(...rows.map(r => r.late));
+  const heat = v => `background: color-mix(in srgb, var(--orange) ${Math.round(6 + 34 * (v - lmin) / ((lmax - lmin) || 1))}%, transparent)`;
+  const g = v => v == null ? '<span class="d flat">–</span>' : `<span class="d ${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(1)}%</span>`;
+  document.getElementById('sub-score').textContent = `${m0 === m1 ? mlong(M[m0]) : ml(M[m0]) + ' – ' + ml(M[m1])}${p0 >= 0 ? ' · growth vs the previous ' + len + ' months' : (m1 - m0 >= 5 ? ' · growth = last 3 months vs first 3 months' : ' · growth = last month vs first month')} · click a column to sort · click a ${noun} to ${noun === 'state' ? 'see its cities' : 'drill through'}`;
+  const cols = [['c', noun === 'state' ? 'State' : 'City'], ['r', 'Revenue', 1], ['o', 'Orders', 1], ['aov', 'Avg order', 1], ['g', 'Growth', 1], ['late', 'Late %', 1], ['rating', 'Rating', 1], ['cod', 'Cash %', 1], ['cancel', 'Cancelled %', 1]];
+  const cell = r => `<td class="num"><div class="dbx"><span class="dbt"><span class="db" style="width:${(100 * r.r / maxR).toFixed(1)}%"></span></span><span class="tv">${L(r.r)}</span></div></td><td class="num">${fmt(r.o)}</td><td class="num">${inr(r.aov)}</td><td class="num">${g(r.g)}</td><td class="num" style="${heat(r.late)}">${r.late.toFixed(1)}%</td><td class="num">${r.rating.toFixed(2)} ★</td><td class="num">${r.cod.toFixed(1)}%</td><td class="num">${r.cancel.toFixed(1)}%</td>`;
+  document.getElementById('c-score').innerHTML = `<table class="data"><thead>${sortHead(cols, sk, 'data-ss')}</thead><tbody>` +
+    rows.map(r => `<tr class="drill${r.c === st.city ? ' sel' : ''}" data-city="${r.c}"><td><button type="button" data-drill="${r.c}" title="${noun === 'state' ? 'See the cities of ' : 'Drill through to '}${cityName(r.c)}">${cityName(r.c)}</button></td>${cell(r)}</tr>`).join('') +
+    `</tbody><tfoot><tr><td>${scope === 'All' ? 'All India' : stateOf(st.city) + ' total'}</td><td class="num">${L(tot.r)}</td><td class="num">${fmt(tot.o)}</td><td class="num">${inr(tot.aov)}</td><td class="num">${g(tot.g)}</td><td class="num">${tot.late.toFixed(1)}%</td><td class="num">${tot.rating.toFixed(2)} ★</td><td class="num">${tot.cod.toFixed(1)}%</td><td class="num">${tot.cancel.toFixed(1)}%</td></tr></tfoot></table>` +
+    `<p class="note">Bars show revenue relative to the top ${noun}; orange shading gets stronger as late deliveries rise.</p>`;
+  // city x month revenue matrix
+  const idx = []; for (let i = m0; i <= m1; i++) idx.push(i);
+  const cmRows = scs.keys.map(k => [k, agg(k, 0, NM - 1).mr]).map(([k, mr]) => [k, idx.map(i => mr[i])]).sort((a, b) => b[1].reduce((x, y) => x + y, 0) - a[1].reduce((x, y) => x + y, 0)).slice(0, 15);
+  let mx = 1; cmRows.forEach(r => r[1].forEach(v => { mx = Math.max(mx, v); }));
+  document.getElementById('h-cm').textContent = scs.kind === 'state' ? 'Revenue by state and month' : 'Revenue by city and month: ' + stateOf(st.city);
+  document.getElementById('sub-cm').textContent = `₹ lakh · darker = higher revenue${scs.keys.length > 15 ? ' · top 15 ' + (noun === 'state' ? 'states' : 'cities') : ''}`;
+  const shade = v => `var(--seq-${Math.min(5, Math.floor(v / mx * 5.999))})`, ink = v => v / mx > 0.66 ? '#fff' : 'var(--text)';
+  document.getElementById('c-cm').innerHTML = `<table class="data cm"><thead><tr><th>${noun === 'state' ? 'State' : 'City'}</th>${idx.map(i => `<th>${ml(M[i])}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>` +
+    cmRows.map(([k, v]) => { const c = cityName(k); return `<tr><td><b>${c}</b></td>${v.map((x, j) => `<td class="cell" style="background:${shade(x)};color:${ink(x)}" title="${c}, ${mlong(M[idx[j]])}: ${inr(x)}">${(x / 1e5).toFixed(1)}</td>`).join('')}<td class="num"><b>${L(v.reduce((a, b) => a + b, 0))}</b></td></tr>`; }).join('') + '</tbody></table>';
+}
+// ---------- delivery-time distribution ----------
+function renderDist(A) {
+  const v = A.dt, tot = v.reduce((a, b) => a + b, 0) || 1, pct = v.map(x => 100 * x / tot), labs = DATA.dtBins.map((l, i) => i === 0 ? '<15' : l);
+  let c = 0, med = 0; for (let i = 0; i < v.length; i++) { c += v[i]; if (c >= tot / 2) { med = i; break; } }
+  const slow = pct.slice(5).reduce((a, b) => a + b, 0);
+  document.getElementById('sub-dist').textContent = `Most orders take ${labs[med]} min · ${slow.toFixed(0)}% take over 35 min (orange)`;
+  const dmx = Math.max(5, Math.ceil(Math.max(...pct) / 5) * 5);
+  vbars(document.getElementById('c-dist'), labs, pct, { w: 'fit', h: 230, bw: 26, max: dmx, ticks: dmx / 5, yf: x => x.toFixed(0) + '%', aria: 'Delivery time distribution',
+    cls: i => i >= 5 ? 'bar-s' : 'bar-t', every: 2, tip: i => `<b>${labs[i]} minutes</b><br>${fmt(v[i])} deliveries (${pct[i].toFixed(1)}%)` });
+}
+// ---------- RFM segments ----------
+function renderRFM() {
+  const rows = DATA.rfm[st.city], tc = rows.reduce((a, r) => a + r[1], 0) || 1, maxS = Math.max(...rows.map(r => r[2]));
+  const act = { 'Champions': 'Reward and ask for referrals', 'Loyal': 'Offer a loyalty programme', 'Potential loyalists': 'Nudge to a 4th and 5th order', 'New customers': 'Welcome series, second-order coupon',
+    'Needs attention': 'Personalised recommendations', 'At risk': 'Win-back offer now', 'Hibernating': 'Low-cost reactivation or let go' };
+  const tone = { 'Champions': 'good', 'Loyal': 'good', 'At risk': 'bad', 'Hibernating': 'bad', 'Needs attention': 'warn' };
+  document.getElementById('c-rfm').innerHTML = `<table class="data"><thead><tr><th>Segment</th><th class="num">Customers</th><th class="num">% of customers</th><th class="num" style="min-width:160px">Share of revenue</th><th class="num">Avg days since order</th><th class="num">Avg orders</th><th class="num">Avg spend</th><th>Suggested action</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td><span class="badge ${tone[r[0]] || 'warn'}" style="${tone[r[0]] ? '' : 'background:var(--card-2);color:var(--text-2)'}">${r[0]}</span></td><td class="num">${fmt(r[1])}</td><td class="num">${(100 * r[1] / tc).toFixed(1)}%</td>` +
+      `<td class="num"><div class="dbx"><span class="dbt"><span class="db" style="width:${(100 * r[2] / maxS).toFixed(1)}%"></span></span><span class="tv">${r[2].toFixed(1)}%</span></div></td><td class="num">${r[3] == null ? '–' : fmt(r[3])}</td><td class="num">${r[4] == null ? '–' : r[4].toFixed(1)}</td><td class="num">${r[5] == null ? '–' : inr(r[5])}</td><td>${act[r[0]]}</td></tr>`).join('') + '</tbody></table>';
+}
+// ---------- Home (cover page) ----------
+function renderLatest() {
+  const el = document.getElementById('latest'), X = DATA.latest;
+  document.getElementById('homeNote').textContent = `Data as of ${AS_OF} · ${fmt(DATA.nOrders || 100000)} orders · updated every night`;
+  document.getElementById('railRange').textContent = `${plainMonth(M[0], true)} – ${AS_OF}`;
+  if (!el || !X || !X.daily || !X.daily.length) { if (el) el.hidden = true; return; }
+  const v = X.daily.map(r => r[1]), mx = Math.max(...v), mn = Math.min(...v), W = 220, H = 44;
+  const pts = v.map((y, i) => `${(i * W / Math.max(1, v.length - 1)).toFixed(1)},${(H - 4 - (H - 8) * (y - mn) / ((mx - mn) || 1)).toFixed(1)}`).join(' ');
+  const rain = X.rain == null ? 'weather not available' : X.rain.length ? `real rain in ${X.rain.length} ${X.rain.length === 1 ? 'city' : 'cities'}: ${X.rain.slice(0, 5).join(', ')}${X.rain.length > 5 ? ' +' + (X.rain.length - 5) + ' more' : ''}` : 'no rain in any city';
+  el.innerHTML = `<div class="lt-l"><span class="live"><i></i>Updated daily</span><b>Latest day: ${dlong(X.date)}</b>` +
+    `<span>${fmt(X.orders)} orders · ${inr(X.revenue)} revenue · ${X.late.toFixed(1)}% late · ${rain}</span></div>` +
+    `<div class="lt-r" title="Orders per day, last ${v.length} days"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-label="Orders per day, last ${v.length} days"><polyline points="${pts}" fill="none" stroke="var(--blue)" stroke-width="2"/></svg><small>Orders per day, last ${v.length} days</small></div>`;
+}
+function renderHome() {
+  renderLatest();
+  const A = agg('All', 0, NM - 1), LC = MTD ? NM - 2 : NM - 1, g = A.mr[LC] / A.mr[0];
+  const pkL = 100 * PEAKH.reduce((a, h) => a + A.lh[h], 0) / (PEAKH.reduce((a, h) => a + A.dh[h], 0) || 1);
+  const tiles = [['Revenue', money(A.r), fmt(A.d) + ' delivered orders · avg ' + inr(A.aov), A.mr], ['Orders', fmt(A.o), `${CITIES.length} cities · ${STATES.length} states and UTs · ${fmt(DATA.rest.length)} restaurants`, A.mo],
+    ['Revenue growth', g.toFixed(1) + '×', plainMonth(M[0], true) + ' to ' + plainMonth(M[LC], true), A.mr], ['Late deliveries', A.late.toFixed(1) + '%', pkL.toFixed(0) + '% at peak hours', A.ml.map((v, i) => A.md[i] ? v / A.md[i] : 0)]];
+  document.getElementById('homeStats').innerHTML = tiles.map((t, i) => `<div class="kpi${i === 3 ? ' alert' : ''}"><div><div class="kl">${t[0]}</div><div class="kv">${t[1]}</div><div class="kd"><span>${t[2]}</span></div></div>${spark(t[3], 0, NM - 1)}</div>`).join('');
+  const rf = DATA.rfm.All, champ = rf[0];
+  const f = [[(100 * A.h.reduce((a, v, h) => a + (RUSH(h) ? v : 0), 0) / A.o).toFixed(0) + '%', 'of orders arrive in 7 lunch and dinner rush hours'],
+    [(A.rls[0] / (A.rln[0] || 1)).toFixed(1) + '★ → ' + (A.rls[3] / (A.rln[3] || 1)).toFixed(1) + '★', 'delivery rating when an order is on time vs 20+ minutes late'],
+    [champ[2].toFixed(0) + '% of revenue', 'comes from Champion customers, only ' + (100 * champ[1] / rf.reduce((a, r) => a + r[1], 0)).toFixed(0) + '% of all customers'],
+    (() => { const w = DATA.lift.slice().sort((a, b) => a[6] - b[6])[0]; return [`${w[0]} ${w[6] >= 0 ? '+' : '−'}${Math.abs(w[6]).toFixed(1)}%`, `extra orders from a ${inr(w[8])} coupon campaign, the weakest of the limited-time offers`]; })()];
+  document.getElementById('homeFindings').innerHTML = f.map(x => `<div class="finding"><b>${x[0]}</b><span>${x[1]}</span></div>`).join('');
+}
+function renderPartners() {
+  const P = DATA.partners[st.city], list = P[st.part];
+  document.getElementById('tk-part').innerHTML = `Riders with at least 25 deliveries over the full period (${fmt(P.count)} riders${st.city === 'All' ? '' : ' in ' + cityName(st.city)}). Fastest and slowest by average delivery time.`;
+  document.getElementById('c-part').innerHTML = `<table class="data"><thead><tr><th>#</th><th>Rider</th><th>Vehicle</th><th>City</th><th class="num">Deliveries</th><th class="num">Avg time</th><th class="num">Late</th></tr></thead><tbody>` +
+    list.map((r, i) => `<tr><td>${i + 1}</td><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td><td class="num">${fmt(r[3])}</td><td class="num">${r[4]} min</td><td class="num"><span class="badge ${r[5] < 20 ? 'good' : r[5] < 40 ? 'warn' : 'bad'}">${r[5]}%</span></td></tr>`).join('') + '</tbody></table>';
+}
+function renderLift() {
+  document.getElementById('c-lift').innerHTML = '<table class="data"><thead><tr><th>Coupon</th><th class="num">Orders/day before</th><th class="num">During</th><th>Result</th></tr></thead><tbody>' +
+    DATA.lift.map(r => { const ok = r[6] > 0; return `<tr><td><b>${r[0]}</b><br><span class="note" style="margin:0">${r[3]} days</span></td><td class="num">${r[4]}</td><td class="num">${r[5]}</td><td><span class="badge ${ok ? 'good' : 'bad'}">${ok ? '✓ +' : '✕ '}${r[6]}%</span><div class="note" style="margin:2px 0 0">${ok ? `More orders · ₹${(r[8] / r[7]).toFixed(0)} per extra order` : 'No lift, ' + inr(r[8]) + ' spent'}</div></td></tr>`; }).join('') + '</tbody></table>';
+}
+
+// ---------- active filter chips ----------
+function renderChips() {
+  const c = [];
+  if (st.city !== 'All') c.push([(isSt(st.city) ? 'State: ' : 'City: ') + cityName(st.city), 'city']);
+  if (st.cmp) c.push(['Compared with ' + cityName(st.cmp), 'cmp']);
+  if (st.m0 !== 0 || st.m1 !== NM - 1) c.push(['Months: ' + (st.m0 === st.m1 ? mlong(M[st.m0]) : ml(M[st.m0]) + ' – ' + ml(M[st.m1])), 'months']);
+  if (st.cuisine) c.push(['Cuisine: ' + st.cuisine, 'cuisine']);
+  document.getElementById('chips').innerHTML = c.length ? '<span class="lab">Filters</span>' + c.map(([t, k]) => `<span class="chip2">${t}<button type="button" data-unchip="${k}" aria-label="Remove filter ${t}">✕</button></span>`).join('') : '';
+}
+document.getElementById('chips').addEventListener('click', e => {
+  const b = e.target.closest('[data-unchip]'); if (!b) return;
+  const k = b.dataset.unchip;
+  if (k === 'city') { st.city = 'All'; st.cmp = ''; } if (k === 'cmp') st.cmp = ''; if (k === 'months') { st.m0 = 0; st.m1 = NM - 1; } if (k === 'cuisine') st.cuisine = null;
+  syncControls(); render();
+});
+// ---------- CSV export of the table inside a visual ----------
+function downloadCSV(box) {
+  const t = box.querySelector('table'); if (!t) return;
+  const rows = [...t.querySelectorAll('tr')].map(tr => [...tr.children].map(td => '"' + td.textContent.replace(/[↕▲▼]/g, '').trim().replace(/"/g, '""') + '"').join(','));
+  const a = document.createElement('a'); a.download = box.querySelector('h2').textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.csv';
+  a.href = URL.createObjectURL(new Blob(['﻿' + rows.join('\n')], { type: 'text/csv' })); a.click(); toast('Table saved as CSV');
+}
+function refreshCsv() { document.querySelectorAll('.box[data-sql]').forEach(b => { const btn = b.querySelector('.act.csv'); if (btn) btn.hidden = !b.querySelector('table'); }); }
+// ---------- guided tour ----------
+function makeTour() {
+  const A = agg('All', 0, NM - 1), LC = MTD ? NM - 2 : NM - 1, T = TOUR0.map(x => x.slice());
+  T[1][2] = `Revenue grew ${(A.mr[LC] / A.mr[0]).toFixed(1)}× in ${LC + 1} months`;
+  T[1][3] = `From ${L(A.mr[0])} in ${plainMonth(M[0], true)} to ${L(A.mr[LC])} in ${plainMonth(M[LC], true)}. The dashed line is a 3-month forecast with its likely range. Click any month to drill into it.`;
+  const tot = A.h.reduce((a, b) => a + b, 0) || 1, rush = 100 * A.h.reduce((a, v, h) => a + (RUSH(h) ? v : 0), 0) / tot;
+  T[2][3] = `${rush.toFixed(0)}% of all orders arrive in 7 lunch and dinner hours (orange). This drives every staffing and delivery decision in the report.`;
+  const pk = 100 * PEAKH.reduce((a, h) => a + A.lh[h], 0) / (PEAKH.reduce((a, h) => a + A.dh[h], 0) || 1);
+  const offL = A.lh.reduce((a, v, h) => a + (PEAKH.includes(h) ? 0 : v), 0), offD = A.dh.reduce((a, v, h) => a + (PEAKH.includes(h) ? 0 : v), 0);
+  T[4][3] = `At 1, 8 and 9 PM about ${pk.toFixed(0)}% of orders arrive late, against ${(100 * offL / (offD || 1)).toFixed(0)}% at other hours. Late orders drop the delivery rating from ${(A.rls[0] / (A.rln[0] || 1)).toFixed(1)}★ to ${(A.rls[3] / (A.rln[3] || 1)).toFixed(1)}★.`;
+  const rf = DATA.rfm.All, tc = rf.reduce((a, r) => a + r[1], 0) || 1, risk = rf.find(r => r[0] === 'At risk');
+  T[5][3] = `RFM segments show Champions are ${(100 * rf[0][1] / tc).toFixed(0)}% of customers but bring ${rf[0][2].toFixed(0)}% of revenue, while ${fmt(risk ? risk[1] : 0)} customers are now at risk.`;
+  const lf = DATA.lift.slice().sort((a, b) => b[6] - a[6]), lo = lf[lf.length - 1];
+  T[6][3] = `Seasonal coupons lifted daily orders by up to ${lf[0][6].toFixed(0)}% (${lf[0][0]}), but ${lo[0]} changed orders by only ${lo[6] >= 0 ? '+' : ''}${lo[6].toFixed(1)}% for ${inr(lo[8])} of discounts.`;
+  return T;
+}
+let TOUR = [];
+const TOUR0 = [
+  ['t-ov', 'kpis', 'Six KPIs at a glance', 'Revenue, orders, average order value, late deliveries, food rating and cancellations. Pick fewer months and each card shows the change against the previous period.'],
+  ['t-ov', 'c-month', 'Revenue doubled in 21 months', 'From ₹17.1 L in Jan 2025 to ₹34.7 L in Sep 2026. The dashed line is a 3-month forecast with its likely range. Click any month to drill into it.'],
+  ['t-ov', 'c-hour', 'Two rushes run the business', '63% of all orders arrive in 7 lunch and dinner hours (orange). This drives every staffing and delivery decision in the report.'],
+  ['t-city', 'c-score', 'Compare states in one table', 'Every state side by side: revenue, growth, lateness, rating and cash use. Sort any column, and click a state to see its cities.'],
+  ['t-de', 'c-late', 'Rush hours run late', 'At 1, 8 and 9 PM about 36% of orders arrive late, against 19% at other hours. Late orders drop the delivery rating from 4.8★ to 2.0★.'],
+  ['t-cu', 'c-rfm', 'A few customers carry revenue', 'RFM segments show Champions are 22% of customers but bring 58% of revenue, while 1,254 valuable customers are now at risk.'],
+  ['t-co', 'c-lift', 'Not every coupon pays off', 'Seasonal coupons lifted daily orders 12–15%, but IPL75 brought no extra orders for ₹6,675 of discounts.'],
+  ['t-ov', 'c-recs', 'What to do next', 'Key insights turn the numbers into actions, and each one links to the visual that proves it. Thanks for taking the tour.']
+];
+let tourI = -1;
+const tourEl = document.getElementById('tour');
+function tourShow(i) {
+  document.querySelectorAll('.tour-focus').forEach(x => x.classList.remove('tour-focus'));
+  if (i < 0 || i >= TOUR.length) { tourEl.hidden = true; tourI = -1; return; }
+  tourI = i; const [tab, id, title, text] = TOUR[i];
+  if (st.tab !== tab) selectTab(document.getElementById(tab));
+  const el = document.getElementById(id), box = el.closest('.box') || el;
+  box.classList.add('tour-focus'); box.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  document.getElementById('tourStep').textContent = `Step ${i + 1} of ${TOUR.length}`;
+  document.getElementById('tourTitle').textContent = title; document.getElementById('tourText').textContent = text;
+  document.getElementById('tourBar').style.width = (100 * (i + 1) / TOUR.length) + '%';
+  document.getElementById('tourBack').disabled = i === 0;
+  document.getElementById('tourNext').textContent = i === TOUR.length - 1 ? 'Finish' : 'Next';
+  tourEl.hidden = false;
+}
+document.getElementById('tourBtn').addEventListener('click', () => { welcomeDone(); Object.assign(st, { city: 'All', cmp: '', m0: 0, m1: NM - 1, cuisine: null }); syncControls(); render(); TOUR = makeTour(); tourShow(0); document.getElementById('tourNext').focus(); });
+document.getElementById('tourNext').addEventListener('click', () => tourShow(tourI + 1));
+document.getElementById('tourBack').addEventListener('click', () => tourShow(tourI - 1));
+document.getElementById('tourClose').addEventListener('click', () => tourShow(-1));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && tourI >= 0) tourShow(-1); });
+
+// ---------------- help panel + first-visit welcome ----------------
+const helpEl = document.getElementById('help'), helpBack = document.getElementById('helpBack'), welEl = document.getElementById('welcome');
+let helpFrom = null;
+function helpOpen() { helpFrom = document.activeElement; welcomeDone(); helpEl.hidden = helpBack.hidden = false; document.getElementById('helpClose').focus(); }
+function helpShut() { helpEl.hidden = helpBack.hidden = true; if (helpFrom && helpFrom.focus) helpFrom.focus(); }
+function welcomeDone() { welEl.hidden = true; try { localStorage.setItem('fd-welcomed', '1'); } catch (e) {} }
+document.getElementById('helpBtn').addEventListener('click', helpOpen);
+document.getElementById('helpClose').addEventListener('click', helpShut);
+helpBack.addEventListener('click', helpShut);
+document.getElementById('helpTour').addEventListener('click', () => { helpShut(); document.getElementById('tourBtn').click(); });
+document.getElementById('wTour').addEventListener('click', () => { welcomeDone(); document.getElementById('tourBtn').click(); });
+document.getElementById('wClose').addEventListener('click', welcomeDone);
+document.addEventListener('keydown', e => {
+  if (helpEl.hidden) return;
+  if (e.key === 'Escape') { helpShut(); return; }
+  if (e.key === 'Tab') { const f = [...helpEl.querySelectorAll('button')]; const a = f[0], z = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } }
+});
+setTimeout(() => { let seen = '1'; try { seen = localStorage.getItem('fd-welcomed'); } catch (e) { seen = null; } if (!seen && tourI < 0) welEl.hidden = false; }, 900);
+
+// ---------------- controls ----------------
+document.getElementById('topN').addEventListener('change', e => { st.topN = +e.target.value; render(); });
+document.getElementById('boardN').addEventListener('change', e => { st.boardN = +e.target.value; renderBoard(restRanking(st.city, st.m0, st.m1)); });
+document.addEventListener('click', e => {
+  const sb = e.target.closest('[data-sb]'); if (sb) { const k = sb.dataset.sb; st.sortB = { k, d: st.sortB.k === k ? -st.sortB.d : (k === 'n' || k === 'c' || k === 'q' ? 1 : -1) }; renderBoard(restRanking(st.city, st.m0, st.m1)); return; }
+  const ss = e.target.closest('[data-ss]'); if (ss) { const k = ss.dataset.ss; st.sortS = { k, d: st.sortS.k === k ? -st.sortS.d : (k === 'c' ? 1 : -1) }; renderScorecard(); return; }
+  const dr = e.target.closest('[data-drill]') || (e.target.closest('tr.drill') && e.target.closest('tr.drill').querySelector('[data-drill]'));
+  if (dr && e.target.closest('#c-score')) { const c = dr.dataset.drill; setCity(c); if (!isSt(c)) selectTab(document.getElementById('t-ov')); window.scrollTo(0, 0); toast(`Showing ${cityName(c)}`); return; }
+  const go = e.target.closest('[data-go]'); if (go) { selectTab(document.getElementById(go.dataset.go)); window.scrollTo(0, 0); }
+});
+// saved views (like Power BI bookmarks)
+const PRESETS = [
+  { name: 'Monsoon delivery problems, Jul–Aug 2025', s: { city: 'All', cmp: '', m0: 6, m1: 7, cuisine: null }, tab: 't-de' },
+  { name: 'Bengaluru vs Mumbai, 2026', s: { city: 'Bengaluru', cmp: 'Mumbai', m0: 12, m1: NM - 1, cuisine: null }, tab: 't-ov' },
+  { name: 'Hyderabad restaurant risks', s: { city: 'Hyderabad', cmp: '', m0: 0, m1: NM - 1, cuisine: null }, tab: 't-re' },
+  { name: 'Festive season, Oct–Dec 2025', s: { city: 'All', cmp: '', m0: 9, m1: 11, cuisine: null }, tab: 't-ov' },
+  { name: 'State scorecard, last 6 months', s: { city: 'All', cmp: '', m0: NM - 6, m1: NM - 1, cuisine: null }, tab: 't-city' },
+  { name: 'West Bengal in Durga Puja month, Sep–Oct 2025', s: { city: 'st:West Bengal', cmp: '', m0: 8, m1: 9, cuisine: null }, tab: 't-ov' },
+  { name: 'Chennai in the north-east monsoon, Oct–Dec 2025', s: { city: 'Chennai', cmp: '', m0: 9, m1: 11, cuisine: null }, tab: 't-de' },
+  { name: 'Kerala vs Tamil Nadu, 2026', s: { city: 'st:Kerala', cmp: 'st:Tamil Nadu', m0: 12, m1: NM - 1, cuisine: null }, tab: 't-ov' }
+];
+const viewsSel = document.getElementById('views');
+const myViews = () => { try { return JSON.parse(localStorage.getItem('fd-views') || '[]'); } catch (e) { return []; } };
+function fillViews() {
+  const mine = myViews();
+  viewsSel.innerHTML = '<option value="">Saved views</option><optgroup label="Examples">' + PRESETS.map((p, i) => `<option value="p${i}">${p.name}</option>`).join('') + '</optgroup>' +
+    (mine.length ? '<optgroup label="My views">' + mine.map((p, i) => `<option value="m${i}">${p.name}</option>`).join('') + '</optgroup>' : '') +
+    '<option value="save">+ Save current view</option>';
+  viewsSel.value = '';
+}
+viewsSel.addEventListener('change', () => {
+  const v = viewsSel.value; if (!v) return;
+  if (v === 'save') {
+    const tabName = document.getElementById(st.tab).textContent.trim();
+    const name = `${cityName(st.city)}${st.cmp ? ' vs ' + cityName(st.cmp) : ''} · ${st.m0 === st.m1 ? ml(M[st.m0]) : ml(M[st.m0]) + '–' + ml(M[st.m1])} · ${tabName}`;
+    const mine = myViews(); mine.push({ name, s: { city: st.city, cmp: st.cmp, m0: st.m0, m1: st.m1, cuisine: st.cuisine }, tab: st.tab });
+    try { localStorage.setItem('fd-views', JSON.stringify(mine.slice(-8))); toast('View saved: ' + name); } catch (e) { toast('This browser blocks saving views'); }
+    fillViews(); return;
+  }
+  const p = v[0] === 'p' ? PRESETS[+v.slice(1)] : myViews()[+v.slice(1)];
+  if (p) { Object.assign(st, p.s); syncControls(); render(); selectTab(document.getElementById(p.tab)); window.scrollTo(0, 0); toast('Opened view: ' + p.name); }
+  fillViews();
+});
+
+const citySel = document.getElementById('citySel');
+
+function setCity(c) { st.city = c; if (st.cmp === c || c === 'All' || (st.cmp && isSt(st.cmp) !== isSt(c))) st.cmp = ''; syncControls(); render(); }
+const stateSel = document.getElementById('stateSel');
+stateSel.innerHTML = '<option value="All">All India</option>' + STATES.slice().sort().map(s => `<option value="${s}">${s} (${DATA.states[s].length})</option>`).join('');
+function fillCity() {
+  const s = stateOf(st.city), list = s ? DATA.states[s] : CITIES.slice().sort();
+  citySel.innerHTML = `<option value="">All cities</option>` + list.map(c => `<option value="${c}">${c}</option>`).join('');
+  citySel.value = DATA.cube[st.city] ? st.city : '';
+}
+stateSel.addEventListener('change', () => setCity(stateSel.value === 'All' ? 'All' : 'st:' + stateSel.value));
+citySel.addEventListener('change', () => setCity(citySel.value || (stateSel.value === 'All' ? 'All' : 'st:' + stateSel.value)));
+const cmpSel = document.getElementById('cmp');
+function fillCmp() {
+  if (st.city === 'All') { cmpSel.innerHTML = '<option value="">Pick a state first</option>'; cmpSel.disabled = true; cmpSel.title = 'Choose a state or city, then compare it with another one'; return; }
+  cmpSel.disabled = false; cmpSel.title = '';
+  const opts = isSt(st.city) ? STATES.slice().sort().map(s => 'st:' + s) : CITIES.slice().sort();
+  cmpSel.innerHTML = `<option value="">No comparison</option>` + opts.filter(c => c !== st.city).map(c => `<option value="${c}">${cityName(c)}</option>`).join(''); cmpSel.value = st.cmp;
+}
+cmpSel.addEventListener('change', () => { st.cmp = cmpSel.value; render(); });
+const i0 = document.getElementById('m0'), i1 = document.getElementById('m1');
+[i0, i1].forEach(inp => { inp.max = NM - 1; inp.addEventListener('input', () => {
+  let a = +i0.value, b = +i1.value; if (a > b) { if (inp === i0) b = a; else a = b; }
+  st.m0 = a; st.m1 = b; render(); }); });
+const mFrom = document.getElementById('mFrom'), mTo = document.getElementById('mTo');
+mFrom.innerHTML = mTo.innerHTML = M.map((m, i) => `<option value="${i}">${mlong(m)}</option>`).join('');
+mFrom.addEventListener('change', () => { st.m0 = +mFrom.value; if (st.m0 > st.m1) st.m1 = st.m0; render(); });
+mTo.addEventListener('change', () => { st.m1 = +mTo.value; if (st.m1 < st.m0) st.m0 = st.m1; render(); });
+function updateRangeUI() {
+  i0.value = st.m0; i1.value = st.m1; mFrom.value = st.m0; mTo.value = st.m1;
+  const f = document.getElementById('rangeFill'), w = document.getElementById('range').clientWidth - 18;
+  f.style.left = (9 + w * st.m0 / (NM - 1)) + 'px'; f.style.width = Math.max(4, w * (st.m1 - st.m0) / (NM - 1)) + 'px';
+  document.getElementById('rangeOut').textContent = st.m0 === st.m1 ? mlong(M[st.m0]) : `${ml(M[st.m0])} – ${ml(M[st.m1])}`;
+  i0.setAttribute('aria-valuetext', mlong(M[st.m0])); i1.setAttribute('aria-valuetext', mlong(M[st.m1]));
+  document.querySelectorAll('#presets button').forEach(b => b.setAttribute('aria-pressed', presetMatch(b.dataset.p)));
+}
+function presetRange(p) { const y25 = M.filter(m => m.startsWith('2025')).length; return p === 'all' ? [0, NM - 1] : p === '2025' ? [0, y25 - 1] : p === '2026' ? [y25, NM - 1] : [NM - 6, NM - 1]; }
+function presetMatch(p) { const [a, b] = presetRange(p); return a === st.m0 && b === st.m1; }
+document.getElementById('presets').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; [st.m0, st.m1] = presetRange(b.dataset.p); render(); });
+document.getElementById('partSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; st.part = b.dataset.v; document.querySelectorAll('#partSeg button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderPartners(); });
+document.getElementById('q').addEventListener('input', e => { st.q = e.target.value; renderBoard(restRanking(st.city, st.m0, st.m1)); });
+document.addEventListener('click', e => { if (e.target.closest('[data-clear]')) { st.cuisine = null; render(); } });
+document.getElementById('reset').addEventListener('click', () => { Object.assign(st, { city: 'All', cmp: '', m0: 0, m1: NM - 1, cuisine: null }); syncControls(); render(); toast('Filters reset'); });
+function syncControls() { stateSel.value = stateOf(st.city) || 'All'; fillCity(); fillCmp(); }
+document.getElementById('lg-month').addEventListener('click', e => { const b = e.target.closest('[data-idx]'); if (b) { st.idx = b.dataset.idx === '1'; render(); } });
+document.getElementById('c-recs').addEventListener('click', e => {
+  const b = e.target.closest('[data-rec]'); if (!b) return;
+  const tg = REC_TARGETS[+b.dataset.rec]; st.hl = tg.hl || null;
+  selectTab(document.getElementById(tg.tab)); render();
+  const box = document.getElementById(tg.box).closest('.box');
+  box.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash');
+  clearTimeout(hlT); hlT = setTimeout(() => { st.hl = null; document.querySelectorAll('.mk.hl').forEach(x => x.classList.remove('hl')); }, 4000);
+});
+let hlT;
+// definitions (fix 7)
+document.addEventListener('mouseover', e => { const b = e.target.closest('.info'); if (b) tipAt(b, DEF[b.dataset.def]); });
+document.addEventListener('mouseout', e => { if (e.target.closest('.info')) tipHide(); });
+document.addEventListener('focusin', e => { const b = e.target.closest('.info'); if (b) tipAt(b, DEF[b.dataset.def]); });
+document.addEventListener('focusout', e => { if (e.target.closest('.info')) tipHide(); });
+document.addEventListener('click', e => { const b = e.target.closest('.info'); if (b) { e.preventDefault(); tipAt(b, DEF[b.dataset.def]); } });
+
+// tabs
+const tabs = [...document.querySelectorAll('.tab')];
+function selectTab(t, focus) {
+  tabs.forEach(x => { const on = x === t; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; document.getElementById(x.getAttribute('aria-controls')).hidden = !on; });
+  if (focus) t.focus(); st.tab = t.id; syncHash();
+  document.getElementById('pageTitle').textContent = t.textContent.trim();
+  document.body.classList.toggle('home', t.id === 't-home');
+  if (booted && t.id !== 't-home' && t.id !== 't-ab') render();   // charts measure their card, so draw them once the page is visible
+  const lock = t.id === 't-cu';
+  document.getElementById('monthGroup').classList.toggle('locked', lock);
+  [i0, i1, mFrom, mTo, ...document.querySelectorAll('#presets button')].forEach(x => x.disabled = lock);
+  mFrom.title = mTo.title = lock ? 'This page always shows all months' : '';
+}
+tabs.forEach((t, i) => { t.addEventListener('click', () => selectTab(t)); t.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); selectTab(tabs[(i + 1) % tabs.length], true); } if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); selectTab(tabs[(i + tabs.length - 1) % tabs.length], true); } }); });
+
+// per-box actions: SQL + PNG
+document.querySelectorAll('.box[data-sql]').forEach(box => {
+  const key = box.dataset.sql, bh = box.querySelector('.bh'), acts = document.createElement('div'); acts.className = 'acts';
+  const pre = document.createElement('pre'); pre.className = 'sql'; pre.innerHTML = hl(SQL[key]); pre.id = 'sql-' + key + '-' + Math.random().toString(36).slice(2, 6);
+  const sb = document.createElement('button'); sb.className = 'act'; sb.type = 'button'; sb.setAttribute('aria-expanded', 'false'); sb.setAttribute('aria-controls', pre.id);
+  sb.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg>View SQL';
+  sb.addEventListener('click', () => { const open = pre.classList.toggle('open'); sb.setAttribute('aria-expanded', open); });
+  acts.appendChild(sb);
+  if (box.dataset.png) {
+    const pb = document.createElement('button'); pb.className = 'act'; pb.type = 'button';
+    pb.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>PNG';
+    pb.addEventListener('click', () => downloadPNG(box.dataset.png, box.querySelector('h2').textContent));
+    acts.appendChild(pb);
+  }
+  const cb = document.createElement('button'); cb.className = 'act csv'; cb.type = 'button';
+  cb.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg>CSV';
+  cb.addEventListener('click', () => downloadCSV(box)); acts.insertBefore(cb, acts.children[1] || null);
+  bh.appendChild(acts); bh.insertAdjacentElement('afterend', pre);
+});
+function downloadPNG(id, title) {
+  const svg = document.querySelector('#' + id + ' svg'); if (!svg) return;
+  const cs = getComputedStyle(document.documentElement), clone = svg.cloneNode(true), vb = svg.viewBox.baseVal;
+  // inline the CSS variables + classes so the image looks the same outside the page
+  const vars = ['--teal', '--saffron', '--violet', '--teal-weak', '--seq-0', '--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5', '--surface', '--line', '--grid', '--muted', '--ink-2'];
+  const res = v => { let x = cs.getPropertyValue(v).trim(); let g = 0; while (x.startsWith('var(') && g++ < 4) x = cs.getPropertyValue(x.slice(4, -1).trim()).trim(); return x; };
+  const map = {}; vars.forEach(v => map[v] = res(v));
+  const style = `text{font-family:Segoe UI,Arial,sans-serif}.lbl{fill:${map['--muted']};font-size:11.5px}.val{fill:${map['--ink-2']};font-size:11.5px;font-weight:700}.gl{stroke:${map['--grid']}}.bl{stroke:${map['--line']}}.bar-t{fill:${map['--teal']}}.bar-s{fill:${map['--saffron']}}.bar-w{fill:${map['--teal-weak']}}.bar-v{fill:${map['--violet']}}.hit{fill:transparent}.ln{fill:none;stroke:${map['--teal']};stroke-width:2.25}.ln.c2{stroke:${map['--violet']};stroke-dasharray:6 4}.ar{fill:${map['--teal']};opacity:.09}.dt{fill:${map['--teal']};stroke:${map['--surface']};stroke-width:2}.dt.c2{fill:${map['--violet']}}.xh{display:none}`;
+  let s = new XMLSerializer().serializeToString(clone).replace(/var\((--[a-z0-9-]+)\)/g, (_, v) => map[v] || res(v));
+  s = s.replace(/^<svg([^>]*)>/, (m0, a) => `<svg${a} width="${vb.width * 2}" height="${vb.height * 2}"><style>${style}</style><rect x="${vb.x}" y="${vb.y}" width="${vb.width}" height="${vb.height}" fill="${map['--surface']}"/>`);
+  const img = new Image();
+  img.onload = () => { const c = document.createElement('canvas'); c.width = vb.width * 2; c.height = vb.height * 2; c.getContext('2d').drawImage(img, 0, 0); const a = document.createElement('a'); a.download = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.png'; a.href = c.toDataURL('image/png'); a.click(); toast('Chart saved as PNG'); };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+}
+const toastEl = document.getElementById('toast'); let tt;
+function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => toastEl.classList.remove('show'), 1800); }
+document.getElementById('print').addEventListener('click', () => window.print());
+document.getElementById('share').addEventListener('click', async () => {
+  syncHash();
+  try { await navigator.clipboard.writeText(location.href); toast('Link to this view copied'); } catch (e) { toast('Copy the address bar to share this view'); }
+});
+document.getElementById('theme').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('fd-theme', next); } catch (e) {}
+});
+let lastW = innerWidth, rT;
+addEventListener('resize', () => { updateRangeUI(); if (Math.abs(innerWidth - lastW) > 40) { lastW = innerWidth; clearTimeout(rT); rT = setTimeout(render, 150); } });
+
+// URL state so a view can be shared
+function syncHash() {
+  const p = new URLSearchParams();
+  if (st.city !== 'All') p.set('city', st.city); if (st.cmp) p.set('vs', st.cmp);
+  if (st.m0 !== 0 || st.m1 !== NM - 1) p.set('m', M[st.m0] + '_' + M[st.m1]);
+  if (st.cuisine) p.set('cuisine', st.cuisine); if (st.tab && st.tab !== 't-home') p.set('tab', st.tab.slice(2));
+  const h = p.toString(); try { history.replaceState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) {}
+}
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (p.get('city') && validKey(p.get('city'))) st.city = p.get('city');
+  if (p.get('vs') && validKey(p.get('vs')) && p.get('vs') !== st.city && st.city !== 'All' && isSt(p.get('vs')) === isSt(st.city)) st.cmp = p.get('vs');
+  if (p.get('m')) { const [a, b] = p.get('m').split('_').map(x => M.indexOf(x)); if (a >= 0 && b >= a) { st.m0 = a; st.m1 = b; } }
+  if (p.get('cuisine') && CUIS.includes(p.get('cuisine'))) st.cuisine = p.get('cuisine');
+  return p.get('tab');
+}
+
+// start
+try { const th = localStorage.getItem('fd-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
+const startTab = readHash();
+syncControls();
+let booted = false;
+renderLift();
+fillViews();
+renderHome();
+render();
+booted = true;
+selectTab(document.getElementById(startTab && document.getElementById('t-' + startTab) ? 't-' + startTab : 't-home'));
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+# Every night: add yesterday's orders (with that day's real rainfall), rebuild the
+# report and publish it. GitHub Pages serves docs/index.html.
+name: Daily data update
+
+on:
+  schedule:
+    - cron: "17 20 * * *"     # 20:17 UTC = 01:47 India time
+  workflow_dispatch:          # "Run workflow" button for a manual update
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install packages
+        run: pip install pandas numpy
+
+      - name: Add the missing days of orders
+        run: python pipeline/daily_update.py
+
+      - name: Rebuild the report
+        run: python pipeline/build_report.py
+
+      - name: Save and publish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data daily_sql docs
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+          else
+            git commit -m "Daily update: data through $(python -c 'import json;print(json.load(open("data/daily_log.json"))[-1]["date"])')"
+            git push
+          fi
