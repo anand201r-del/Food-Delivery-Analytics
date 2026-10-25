@@ -435,5 +435,23 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-10-25",
+  "orders": 288,
+  "revenue": 113947,
+  "new_customers": 23,
+  "rain_cities": [
+   "Bengaluru",
+   "Chennai",
+   "Coimbatore",
+   "Gurugram",
+   "Kochi",
+   "Madurai",
+   "Mysuru",
+   "Puducherry",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
  }
 ]
