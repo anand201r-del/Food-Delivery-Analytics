@@ -453,5 +453,17 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-10-26",
+  "orders": 184,
+  "revenue": 77722,
+  "new_customers": 22,
+  "rain_cities": [
+   "Madurai",
+   "Puducherry",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
  }
 ]
