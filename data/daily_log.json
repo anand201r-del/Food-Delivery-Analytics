@@ -465,5 +465,20 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-10-27",
+  "orders": 171,
+  "revenue": 79070,
+  "new_customers": 19,
+  "rain_cities": [
+   "Aizawl",
+   "Bhubaneswar",
+   "Kolkata",
+   "Thiruvananthapuram",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
  }
 ]
