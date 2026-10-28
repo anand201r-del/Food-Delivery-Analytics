@@ -1,0 +1,23 @@
+# Render Blueprint: one free web service running the live app (FastAPI + order simulator).
+# The database is a free MySQL on Aiven; paste its Service URI as DATABASE_URL when Render asks.
+services:
+  - type: web
+    name: food-delivery-live
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r app/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - app/**
+        - render.yaml
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Food Delivery Live</title>
+<meta name="description" content="Live food-delivery operations across 49 Indian cities: orders flowing through a MySQL database in real time, analytics and an AI analyst. Simulated orders, real weather.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0d14; --bg2: #0f1420; --card: #121826; --card2: #172033; --line: #232c40; --line2: #2d3850;
+  --text: #e8ecf4; --text2: #a3adc2; --text3: #6f7a92;
+  --accent: #ff7a1a; --accent2: #ffb36b; --blue: #3b8bff; --green: #2ecc8f; --red: #ff5d6c; --yellow: #f5c451; --violet: #a78bfa;
+  --radius: 14px; --shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+:root[data-theme="light"] {
+  --bg: #f6f7fb; --bg2: #ffffff; --card: #ffffff; --card2: #f3f5fa; --line: #e3e7ef; --line2: #d5dbe6;
+  --text: #121826; --text2: #4a5468; --text3: #7a8499; --shadow: 0 8px 24px rgba(20,30,60,.08);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+.mono { font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; }
+
+/* header */
+header { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(12px); background: color-mix(in srgb, var(--bg) 82%, transparent); border-bottom: 1px solid var(--line); }
+.nav { display: flex; align-items: center; gap: 22px; height: 62px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -.01em; text-decoration: none; font-size: 17px; }
+.brand .logo { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--accent), #ff4d6d); display: grid; place-items: center; color: #fff; font-size: 16px; }
+.nav nav { display: flex; gap: 4px; margin-left: 10px; }
+.nav nav a { text-decoration: none; color: var(--text2); font-weight: 500; padding: 7px 12px; border-radius: 8px; font-size: 14px; }
+.nav nav a:hover { color: var(--text); background: var(--card); }
+.nav .sp { flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--text); border-radius: 10px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
+.btn:hover { border-color: var(--text3); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.icon-btn { width: 36px; height: 36px; padding: 0; justify-content: center; }
+
+/* hero */
+.hero { padding: 54px 0 28px; position: relative; }
+.hero::before { content: ""; position: absolute; inset: -60px 0 auto; height: 420px; background: radial-gradient(600px 260px at 20% 30%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%), radial-gradient(500px 240px at 85% 10%, color-mix(in srgb, var(--blue) 18%, transparent), transparent 70%); pointer-events: none; z-index: -1; }
+.kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text2); background: var(--card); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 60%, transparent); animation: pulse 2s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 55%, transparent); } 70% { box-shadow: 0 0 0 9px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+h1 { font-size: clamp(32px, 5vw, 54px); line-height: 1.06; letter-spacing: -.03em; margin: 18px 0 14px; font-weight: 800; max-width: 820px; }
+h1 em { font-style: normal; background: linear-gradient(90deg, var(--accent), #ff4d6d); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lede { color: var(--text2); font-size: 17px; max-width: 720px; margin: 0 0 26px; }
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.stat .l { color: var(--text3); font-size: 12.5px; font-weight: 600; }
+.stat .v { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.stat .s { color: var(--text3); font-size: 12px; }
+.rainbar { margin-top: 14px; display: none; align-items: center; gap: 10px; color: var(--text2); font-size: 14px; background: color-mix(in srgb, var(--blue) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--line)); border-radius: 12px; padding: 10px 14px; }
+.rainbar.show { display: flex; }
+
+/* sections */
+section { padding: 26px 0; scroll-margin-top: 70px; }
+.sec-h { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.sec-h h2 { margin: 0; font-size: 24px; letter-spacing: -.02em; }
+.sec-h p { margin: 4px 0 0; color: var(--text2); font-size: 14px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.grid2 { display: grid; grid-template-columns: 1.55fr 1fr; gap: 16px; }
+
+/* filters */
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip { border: 1px solid var(--line2); background: transparent; color: var(--text2); border-radius: 999px; padding: 6px 13px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+select.sel { background: var(--card); color: var(--text); border: 1px solid var(--line2); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 600; }
+
+/* live feed */
+.pipeline { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+.pipeline div { padding: 12px 16px; border-right: 1px solid var(--line); }
+.pipeline div:last-child { border-right: 0; }
+.pipeline b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.pipeline span { color: var(--text3); font-size: 12px; font-weight: 600; }
+.feed { list-style: none; margin: 0; padding: 0; max-height: 560px; overflow-y: auto; }
+.feed li { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.feed li.new { animation: flash 2.2s ease-out; }
+@keyframes flash { from { background: color-mix(in srgb, var(--accent) 16%, transparent); } to { background: transparent; } }
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; letter-spacing: .02em; white-space: nowrap; }
+.pill.PLACED { background: color-mix(in srgb, var(--yellow) 18%, transparent); color: var(--yellow); }
+.pill.CONFIRMED { background: color-mix(in srgb, var(--blue) 18%, transparent); color: var(--blue); }
+.pill.PREPARING { background: color-mix(in srgb, var(--violet) 20%, transparent); color: var(--violet); }
+.pill.PICKED_UP { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent2); }
+.pill.DELIVERED { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+.pill.CANCELLED { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); }
+.feed .what b { font-weight: 600; }
+.feed .what .sub { color: var(--text3); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.feed .amt { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.feed .amt small { display: block; color: var(--text3); font-weight: 500; font-size: 12px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; margin-left: 6px; vertical-align: 1px; }
+.tag.rain { background: color-mix(in srgb, var(--blue) 18%, transparent); color: var(--blue); }
+.tag.late { background: color-mix(in srgb, var(--red) 16%, transparent); color: var(--red); }
+.tag.cp { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+.feed-foot { padding: 10px 16px; color: var(--text3); font-size: 12.5px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.empty { padding: 40px 16px; text-align: center; color: var(--text3); }
+
+/* ask */
+.ask { padding: 18px; }
+.ask form { display: flex; gap: 10px; }
+.ask input { flex: 1; min-width: 0; background: var(--card2); border: 1px solid var(--line2); color: var(--text); border-radius: 12px; padding: 12px 14px; font: inherit; }
+.ask input:focus, select.sel:focus, .chip:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.examples { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+.answer { margin-top: 16px; display: none; }
+.answer.show { display: block; }
+.answer .txt { font-size: 15.5px; }
+.answer details { margin-top: 10px; }
+.answer summary { cursor: pointer; color: var(--text2); font-size: 13px; font-weight: 600; }
+.answer pre { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; overflow-x: auto; font-size: 12.5px; color: var(--text2); white-space: pre-wrap; }
+.tbl { overflow-x: auto; margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.tbl table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.tbl th, .tbl td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.tbl th { color: var(--text3); font-weight: 600; background: var(--card2); }
+.err { color: var(--red); }
+.note { color: var(--text3); font-size: 12.5px; }
+
+/* analytics */
+.chart-card { padding: 16px 16px 10px; }
+.chart-box { position: relative; height: 300px; }
+.states { padding: 16px; }
+.srow { display: grid; grid-template-columns: 130px 1fr 80px; gap: 10px; align-items: center; padding: 5px 0; font-size: 13.5px; }
+.srow .bar { height: 10px; border-radius: 6px; background: var(--card2); overflow: hidden; }
+.srow .bar i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--accent), #ff4d6d); }
+.srow .n { text-align: right; color: var(--text2); font-variant-numeric: tabular-nums; }
+
+/* narrative + insights */
+.narr { padding: 20px; font-size: 16.5px; line-height: 1.65; }
+.narr .by { color: var(--text3); font-size: 12.5px; margin-top: 10px; }
+.ins { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ins .card { padding: 16px; }
+.ins .t { font-size: 11.5px; font-weight: 700; color: var(--accent2); text-transform: uppercase; letter-spacing: .06em; }
+.ins h3 { margin: 6px 0 6px; font-size: 16px; line-height: 1.35; }
+.ins p { margin: 0; color: var(--text2); font-size: 13.5px; }
+
+footer { border-top: 1px solid var(--line); margin-top: 30px; padding: 28px 0 40px; color: var(--text3); font-size: 13.5px; }
+footer .cols { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; }
+footer h4 { color: var(--text); margin: 0 0 8px; font-size: 14px; }
+footer a { color: var(--text2); text-decoration: none; display: block; padding: 2px 0; }
+footer a:hover { color: var(--text); }
+
+.setup { position: fixed; inset: 0; z-index: 50; display: none; place-items: center; background: color-mix(in srgb, var(--bg) 92%, transparent); }
+.setup.show { display: grid; }
+.setup .box { width: min(440px, 90vw); text-align: center; }
+.setup .bar { height: 8px; background: var(--card2); border-radius: 8px; overflow: hidden; margin: 16px 0 8px; }
+.setup .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+
+@media (max-width: 980px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } .grid2 { grid-template-columns: 1fr; } .ins { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) {
+  .nav nav { display: none; } .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ins { grid-template-columns: 1fr; }
+  .feed li { grid-template-columns: 1fr auto; } .feed li .pill { grid-column: 1 / -1; justify-self: start; }
+  .pipeline { grid-template-columns: repeat(2, 1fr); } .pipeline div:nth-child(2) { border-right: 0; } .pipeline div { border-bottom: 1px solid var(--line); }
+  footer .cols { grid-template-columns: 1fr; } .ask form { flex-direction: column; } .srow { grid-template-columns: 100px 1fr 64px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top"><span class="logo" aria-hidden="true">🍛</span>Food Delivery Live</a>
+    <nav aria-label="Sections"><a href="#live">Live orders</a><a href="#ask">Ask AI</a><a href="#analytics">Analytics</a><a href="#insights">Insights</a></nav>
+    <span class="sp"></span>
+    <a class="btn" href="https://anand201r-del.github.io/Food-Delivery-Analytics/" target="_blank" rel="noopener">Full BI report</a>
+    <a class="btn icon-btn" href="https://github.com/anand201r-del/Food-Delivery-Analytics" target="_blank" rel="noopener" aria-label="Source code on GitHub"><svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    <button class="btn icon-btn" id="theme" type="button" aria-label="Switch light or dark theme">◐</button>
+  </div>
+</header>
+
+<main id="top" class="wrap">
+  <div class="hero">
+    <span class="kicker"><span class="dot" aria-hidden="true"></span><span id="liveTxt">Live · connecting…</span></span>
+    <h1>Every food order across India, <em>as it happens.</em></h1>
+    <p class="lede">Orders from 49 cities flow through a MySQL database in real time: a stored procedure checks the cart, locks stock, applies the coupon, takes payment and assigns the nearest free rider in one transaction. Real rainfall slows the riders down. An AI analyst answers your questions with SQL.</p>
+    <div class="stats" id="stats" aria-live="polite">
+      <div class="stat"><div class="l">Orders today</div><div class="v" id="sOrders">–</div><div class="s" id="sOrdersS">&nbsp;</div></div>
+      <div class="stat"><div class="l">Revenue today</div><div class="v" id="sRev">–</div><div class="s">delivered orders</div></div>
+      <div class="stat"><div class="l">In progress now</div><div class="v" id="sActive">–</div><div class="s">placed → on the way</div></div>
+      <div class="stat"><div class="l">Riders on the road</div><div class="v" id="sRiders">–</div><div class="s">of 2,200</div></div>
+      <div class="stat"><div class="l">Late today</div><div class="v" id="sLate">–</div><div class="s">after promised time</div></div>
+      <div class="stat"><div class="l">Biggest order today</div><div class="v" id="sBig">–</div><div class="s" id="sAov">&nbsp;</div></div>
+    </div>
+    <div class="rainbar" id="rainbar" role="status"><span aria-hidden="true">🌧️</span><span id="rainTxt"></span></div>
+  </div>
+
+  <section id="live">
+    <div class="sec-h">
+      <div><h2>Live orders</h2><p>New orders appear as they are placed; their status moves on every few seconds.</p></div>
+      <div class="filters" role="group" aria-label="Filter live orders">
+        <label class="note" for="fState">State</label>
+        <select class="sel" id="fState"><option value="All">All India</option></select>
+        <button class="chip" type="button" data-min="0" aria-pressed="true">Any size</button>
+        <button class="chip" type="button" data-min="500" aria-pressed="false">₹500+</button>
+        <button class="chip" type="button" data-min="1000" aria-pressed="false">₹1,000+</button>
+        <button class="chip" type="button" data-min="2000" aria-pressed="false">₹2,000+</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="pipeline" aria-label="Orders in progress by status">
+        <div><b id="pPLACED">–</b><span>Placed</span></div><div><b id="pCONFIRMED">–</b><span>Rider assigned</span></div>
+        <div><b id="pPREPARING">–</b><span>Preparing</span></div><div><b id="pPICKED_UP">–</b><span>On the way</span></div>
+      </div>
+      <ul class="feed" id="feed" aria-live="polite" aria-label="Latest orders"><li class="empty">Loading orders…</li></ul>
+      <div class="feed-foot"><span id="rollTxt">&nbsp;</span><span id="feedTime">&nbsp;</span></div>
+    </div>
+  </section>
+
+  <section id="ask">
+    <div class="sec-h"><div><h2>Ask the data</h2><p>Ask in plain English. The AI writes a read-only SQL query, runs it on the live database and shows you the query and the rows it used.</p></div></div>
+    <div class="card ask">
+      <form id="askForm"><input id="q" maxlength="300" placeholder="e.g. Which cuisine earned the most in Kerala this month?" aria-label="Your question" autocomplete="off"><button class="btn primary" type="submit" id="askBtn">Ask</button></form>
+      <div class="examples" id="examples">
+        <button class="chip" type="button">Which state has the most orders today?</button>
+        <button class="chip" type="button">What are the 5 biggest orders today?</button>
+        <button class="chip" type="button">How many orders are on the way right now?</button>
+        <button class="chip" type="button">Which riders were fastest this week?</button>
+        <button class="chip" type="button">Which coupons earn the most revenue per rupee of discount?</button>
+      </div>
+      <div class="answer" id="answer" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="analytics">
+    <div class="sec-h">
+      <div><h2>Orders and revenue</h2><p id="anaSub">Orders (bars) and revenue (line).</p></div>
+      <div class="filters" role="group" aria-label="Time range"><button class="chip" data-r="24h" aria-pressed="true" type="button">24H</button><button class="chip" data-r="7d" aria-pressed="false" type="button">7D</button><button class="chip" data-r="30d" aria-pressed="false" type="button">30D</button></div>
+    </div>
+    <div class="grid2">
+      <div class="card chart-card"><div class="chart-box"><canvas id="chart" aria-label="Orders and revenue over time" role="img"></canvas></div></div>
+      <div class="card states"><div class="note" style="margin-bottom:8px">Revenue by state in this period</div><div id="states"></div></div>
+    </div>
+  </section>
+
+  <section id="insights">
+    <div class="sec-h"><div><h2>Market narrative</h2><p>Written each morning from yesterday's numbers.</p></div></div>
+    <div class="card narr"><div id="narr">Loading…</div><div class="by" id="narrBy"></div></div>
+    <div class="sec-h" style="margin-top:22px"><div><h2>Insights</h2><p>Recomputed from the live database every few minutes.</p></div></div>
+    <div class="ins" id="ins"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap cols">
+    <div><h4>Food Delivery Live</h4>A portfolio project by <b>Anand Kumar</b> (M.Tech CSE, IIIT Guwahati): MySQL schema, stored procedures, triggers and indexes, a Python order simulator, a FastAPI backend and an AI analyst.<br><br><b>Orders, customers and restaurants are simulated.</b> The rainfall is real (Open-Meteo). Not affiliated with Swiggy or Zomato. AI answers can be wrong; check the SQL shown with each answer.</div>
+    <div><h4>Explore</h4><a href="#live">Live orders</a><a href="#ask">Ask AI</a><a href="#analytics">Analytics</a><a href="/docs">API docs</a></div>
+    <div><h4>Project</h4><a href="https://github.com/anand201r-del/Food-Delivery-Analytics" target="_blank" rel="noopener">GitHub repository</a><a href="https://anand201r-del.github.io/Food-Delivery-Analytics/" target="_blank" rel="noopener">Full BI report</a><a href="https://github.com/anand201r-del/Food-Delivery-Analytics/blob/main/ARCHITECTURE.md" target="_blank" rel="noopener">Architecture</a></div>
+  </div>
+</footer>
+
+<div class="setup" id="setup" role="status"><div class="box"><h2 style="margin:0">Waking up the kitchen…</h2><div class="bar"><i id="setupBar"></i></div><div class="note" id="setupTxt">The free server sleeps when nobody visits. This takes about a minute.</div></div></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const fmt = n => Number(n || 0).toLocaleString('en-IN');
+const inr = n => '₹' + fmt(Math.round(n || 0));
+const lakh = n => n >= 1e7 ? '₹' + (n / 1e7).toFixed(2) + ' Cr' : n >= 1e5 ? '₹' + (n / 1e5).toFixed(2) + ' L' : inr(n);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const ago = s => s < 60 ? s + 's ago' : s < 3600 ? Math.floor(s / 60) + ' min ago' : s < 86400 ? Math.floor(s / 3600) + ' h ago' : Math.floor(s / 86400) + ' d ago';
+const LABEL = { PLACED: 'Placed', CONFIRMED: 'Rider assigned', PREPARING: 'Preparing', PICKED_UP: 'On the way', DELIVERED: 'Delivered', CANCELLED: 'Cancelled' };
+const st = { state: 'All', min: 0, range: '24h', seen: new Set(), first: true, last: 0 };
+
+try { const t = localStorage.getItem('fdl-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+$('#theme').addEventListener('click', () => { const d = document.documentElement, t = d.dataset.theme === 'light' ? 'dark' : 'light'; d.dataset.theme = t; try { localStorage.setItem('fdl-theme', t); } catch (e) {} drawChart(); });
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 503) { showSetup(j.error || {}); throw new Error('setup'); }
+  hideSetup();
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function showSetup(e) {
+  $('#setup').classList.add('show');
+  const p = Math.round(100 * (e.progress || 0));
+  $('#setupBar').style.width = Math.max(4, p) + '%';
+  $('#setupTxt').textContent = e.state === 'setting up' && e.detail ? `First start: ${e.detail} (${p}%)` : e.error ? 'Setup problem: ' + e.error : 'The free server sleeps when nobody visits. This takes about a minute.';
+}
+function hideSetup() { $('#setup').classList.remove('show'); }
+
+// ---------- hero + live feed
+async function loadLive() {
+  const q = `state=${encodeURIComponent(st.state)}&min_value=${st.min}`;
+  const [L, S] = await Promise.all([api(`/api/live?${q}&limit=40`), api(`/api/summary?range=24h&state=${encodeURIComponent(st.state)}&min_value=${st.min}`)]);
+  const T = S.today;
+  $('#sOrders').textContent = fmt(T.orders); $('#sRev').textContent = lakh(T.revenue); $('#sActive').textContent = fmt(T.active);
+  $('#sRiders').textContent = fmt(T.riders_busy); $('#sLate').textContent = T.late_pct.toFixed(1) + '%'; $('#sBig').textContent = inr(T.biggest);
+  $('#sAov').textContent = 'avg order ' + inr(T.aov); $('#sOrdersS').textContent = st.state === 'All' ? 'all of India' : st.state;
+  for (const k of ['PLACED', 'CONFIRMED', 'PREPARING', 'PICKED_UP']) $('#p' + k).textContent = fmt(L.in_progress[k] || 0);
+  const rain = L.rain_now || [];
+  $('#rainbar').classList.toggle('show', rain.length > 0);
+  $('#rainTxt').textContent = rain.length ? `Raining now in ${rain.length} ${rain.length === 1 ? 'city' : 'cities'}: ${rain.slice(0, 8).join(', ')}${rain.length > 8 ? ' and more' : ''}. Deliveries there run slower. (Live weather from Open-Meteo)` : '';
+  const ul = $('#feed');
+  if (!L.orders.length) { ul.innerHTML = '<li class="empty">No orders match these filters in the last two days.</li>'; }
+  else {
+    ul.innerHTML = L.orders.map(o => {
+      const isNew = !st.first && !st.seen.has(o.id);
+      const tags = (o.rain ? '<span class="tag rain">rain</span>' : '') + (o.late ? '<span class="tag late">late</span>' : '') + (o.coupon ? `<span class="tag cp">${esc(o.coupon)}</span>` : '');
+      const sub = `${esc(o.restaurant)} · ${esc(o.zone)}, ${esc(o.city)} · ${o.payment === 'COD' ? 'Cash' : esc(o.payment)} · ${ago(o.ago_s)}`;
+      return `<li class="${isNew ? 'new' : ''}"><span class="pill ${o.status}">${LABEL[o.status]}</span>` +
+        `<div class="what"><b>${esc(o.item || 'Order')}</b>${o.items > 1 ? ` <span class="note">+${o.items - 1} more</span>` : ''}${tags}<div class="sub">#${o.id} · ${sub}</div></div>` +
+        `<div class="amt">${inr(o.amount)}<small>${o.minutes != null ? o.minutes + ' min' : esc(o.state)}</small></div></li>`;
+    }).join('');
+    L.orders.forEach(o => st.seen.add(o.id));
+  }
+  st.first = false;
+  $('#rollTxt').textContent = L.last_rollback ? `Transactions rolled back since restart: ${L.rolled_back_today} (last: ${L.last_rollback.why})` : 'Every order is one MySQL transaction: all steps succeed or none do.';
+  $('#feedTime').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN');
+  $('#liveTxt').textContent = 'Live · simulated orders, real weather';
+  st.last = Date.now();
+}
+
+// ---------- analytics
+let chart, lastSum;
+async function loadAnalytics() {
+  lastSum = await api(`/api/summary?range=${st.range}&state=${encodeURIComponent(st.state)}&min_value=${st.min}`);
+  drawChart();
+  const rows = lastSum.by_state.slice(0, 12), mx = Math.max(1, ...rows.map(r => r.revenue));
+  $('#states').innerHTML = rows.length ? rows.map(r => `<div class="srow"><span>${esc(r.state)}</span><span class="bar"><i style="width:${(100 * r.revenue / mx).toFixed(1)}%"></i></span><span class="n">${lakh(r.revenue)}</span></div>`).join('') : '<div class="empty">No orders in this period.</div>';
+  const tot = lastSum.series.reduce((a, r) => a + r.orders, 0), rev = lastSum.series.reduce((a, r) => a + r.revenue, 0);
+  $('#anaSub').textContent = `${fmt(tot)} orders and ${lakh(rev)} revenue in the last ${st.range === '24h' ? '24 hours' : st.range === '7d' ? '7 days' : '30 days'}${st.state !== 'All' ? ' in ' + st.state : ''}. Orders are bars, revenue is the line.`;
+}
+function drawChart() {
+  if (!lastSum || !window.Chart) return;
+  const css = getComputedStyle(document.documentElement), c = n => css.getPropertyValue(n).trim();
+  const labels = lastSum.series.map(r => lastSum.step === 'hour' ? r.t.slice(11, 16) : new Date(r.t + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }));
+  const data = { labels, datasets: [
+    { type: 'bar', label: 'Orders', data: lastSum.series.map(r => r.orders), backgroundColor: c('--accent') + 'cc', borderRadius: 4, yAxisID: 'y' },
+    { type: 'line', label: 'Revenue (₹)', data: lastSum.series.map(r => r.revenue), borderColor: c('--blue'), backgroundColor: c('--blue'), tension: .3, pointRadius: 0, borderWidth: 2.5, yAxisID: 'y1' }] };
+  const opts = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { labels: { color: c('--text2'), boxWidth: 12 } }, tooltip: { callbacks: { label: x => x.dataset.yAxisID === 'y1' ? ' Revenue ' + inr(x.raw) : ' Orders ' + fmt(x.raw) } } },
+    scales: { x: { ticks: { color: c('--text3'), maxTicksLimit: 12 }, grid: { display: false } },
+      y: { position: 'left', ticks: { color: c('--text3') }, grid: { color: c('--line') }, title: { display: true, text: 'Orders', color: c('--text3') } },
+      y1: { position: 'right', ticks: { color: c('--text3'), callback: v => lakh(v) }, grid: { display: false } } } };
+  if (chart) chart.destroy();
+  chart = new Chart($('#chart'), { data, options: opts });
+}
+
+// ---------- ask
+async function ask(question) {
+  const box = $('#answer'); box.classList.add('show');
+  box.innerHTML = '<div class="note">Thinking: writing SQL and running it on the live database…</div>';
+  $('#askBtn').disabled = true;
+  try {
+    const r = await api('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) });
+    if (r.error) { box.innerHTML = `<div class="err">${esc(r.error)}</div>` + (r.sql ? `<details><summary>SQL</summary><pre class="mono">${esc(r.sql)}</pre></details>` : ''); return; }
+    const table = r.columns && r.columns.length ? `<div class="tbl"><table><thead><tr>${r.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${r.rows.slice(0, 20).map(row => `<tr>${row.map(v => `<td>${esc(typeof v === 'number' ? (Number.isInteger(v) ? fmt(v) : v.toLocaleString('en-IN', { maximumFractionDigits: 2 })) : v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '';
+    box.innerHTML = `<div class="txt">${esc(r.answer)}</div><details open><summary>The SQL it ran (${r.ms} ms, ${r.rows.length} rows)</summary><pre class="mono">${esc(r.sql)}</pre></details>${table}`;
+  } catch (e) { if (e.message !== 'setup') box.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+  finally { $('#askBtn').disabled = false; }
+}
+$('#askForm').addEventListener('submit', e => { e.preventDefault(); const q = $('#q').value.trim(); if (q) ask(q); });
+$('#examples').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { $('#q').value = b.textContent; ask(b.textContent); } });
+
+// ---------- narrative + insights
+async function loadText() {
+  const [N, I] = await Promise.all([api('/api/narrative'), api('/api/insights')]);
+  $('#narr').textContent = N.text;
+  $('#narrBy').textContent = (N.ai ? 'Written by Gemini from the database figures' : 'Generated from the database figures') + ' · ' + new Date(N.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+  $('#ins').innerHTML = I.map(x => `<div class="card"><div class="t">${esc(x.tag)}</div><h3>${esc(x.title)}</h3><p>${esc(x.text)}</p></div>`).join('');
+}
+
+// ---------- filters
+document.querySelectorAll('[data-min]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-min]').forEach(x => x.setAttribute('aria-pressed', x === b)); st.min = +b.dataset.min; st.first = true; refresh();
+}));
+document.querySelectorAll('[data-r]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-r]').forEach(x => x.setAttribute('aria-pressed', x === b)); st.range = b.dataset.r; loadAnalytics().catch(() => {});
+}));
+$('#fState').addEventListener('change', e => { st.state = e.target.value; st.first = true; refresh(); });
+
+async function refresh() { try { await loadLive(); await loadAnalytics(); } catch (e) {} }
+async function boot() {
+  try {
+    const s = await api('/api/states');
+    $('#fState').insertAdjacentHTML('beforeend', s.map(x => `<option>${esc(x)}</option>`).join(''));
+    await refresh(); loadText().catch(() => {});
+  } catch (e) { setTimeout(boot, 4000); return; }
+  setInterval(() => { if (!document.hidden) loadLive().catch(() => {}); }, 5000);
+  setInterval(() => { if (!document.hidden) loadAnalytics().catch(() => {}); }, 60000);
+  setInterval(() => { if (!document.hidden) loadText().catch(() => {}); }, 300000);
+}
+boot();
+</script>
+</body>
+</html>

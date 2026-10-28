@@ -1,0 +1,50 @@
+# Tests the live app end to end against a real MySQL 8.0 (the version Aiven runs):
+# database setup, live orders through the stored procedures, roll-back, status changes,
+# every API endpoint and the AI SQL guard. Runs twice: as an admin user, and as a user
+# without SUPER (like a managed cloud database), where triggers may be refused.
+name: Live app test
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**", "01_schema.sql", "04_procedures_triggers.sql", "06_views.sql", ".github/workflows/live-app-test.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        user: [admin, limited]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: defaultdb
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -prootpw"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r app/requirements.txt httpx
+      - name: Create a limited database user
+        if: matrix.user == 'limited'
+        run: |
+          python - <<'PY'
+          import pymysql
+          c = pymysql.connect(host="127.0.0.1", user="root", password="rootpw", autocommit=True).cursor()
+          c.execute("CREATE USER 'app'@'%' IDENTIFIED BY 'apppw'")
+          c.execute("GRANT ALL PRIVILEGES ON defaultdb.* TO 'app'@'%'")
+          PY
+      - name: Self-test
+        env:
+          DATABASE_URL: ${{ matrix.user == 'admin' && 'mysql://root:rootpw@127.0.0.1:3306/defaultdb' || 'mysql://app:apppw@127.0.0.1:3306/defaultdb' }}
+          SIMULATE: "0"
+        run: python -m app.selftest
