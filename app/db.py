@@ -198,11 +198,11 @@ INDEXES = [
 
 def setup(force=False):
     """Create everything once. Safe to call on every start: it returns quickly when done."""
-    STATUS.update(state="setting up", detail="checking database", progress=0.0)
-    if tables_ready() and not force:
+    if not force and tables_ready():
         STATUS["procedures"] = procedures_available()
         STATUS.update(state="ready", detail="", progress=1.0)
         return
+    STATUS.update(state="setting up", detail="checking database", progress=0.0)
     t0 = time.time()
     STATUS["detail"] = "creating tables (01_schema.sql)"
     with cursor() as c:
@@ -251,8 +251,7 @@ def setup(force=False):
 def procedures_available():
     r = one("SELECT COUNT(*) AS n FROM information_schema.routines WHERE routine_schema = DATABASE() "
             "AND routine_name IN ('sp_place_order','sp_update_order_status','sp_cancel_order','sp_assign_partner')")
-    t = one("SELECT COUNT(*) AS n FROM information_schema.triggers WHERE trigger_schema = DATABASE()")
-    return bool(r and r["n"] == 4 and t and t["n"] >= 3)
+    return bool(r and r["n"] == 4)
 
 
 def get_state(k, default=None):

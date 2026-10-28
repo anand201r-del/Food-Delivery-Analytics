@@ -79,6 +79,10 @@ def run():
 
     # API
     with TestClient(main.app) as cl:
+        for _ in range(60):
+            if cl.get("/api/health").json()["state"] == "ready":
+                break
+            time.sleep(0.5)
         for path in ["/api/health", "/api/status", "/api/states", "/api/summary?range=24h", "/api/summary?range=7d&state=Kerala",
                      "/api/summary?range=30d&min_value=1000", "/api/live", "/api/live?state=Maharashtra&min_value=500",
                      "/api/narrative", "/api/insights", "/", "/docs"]:
