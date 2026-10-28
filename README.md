@@ -27,6 +27,17 @@ A complete **MySQL** database behind a Swiggy / Zomato–style food delivery app
 
 ---
 
+## 🏗️ Architecture
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/architecture_dark.png">
+  <img alt="Project architecture: nightly GitHub Actions pipeline and the MySQL database" src="images/architecture_light.png">
+</picture>
+
+A nightly **GitHub Actions** job adds a new day of orders (using that day's **real rainfall**) and republishes the report on **GitHub Pages**, while the **MySQL** database holds the schema, business logic, indexes and views used for SQL analysis and Power BI. Components, the nightly sequence and design decisions are in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
+---
+
 ## 🔄 Daily data pipeline (runs by itself)
 
 Every night at 01:47 India time a GitHub Actions job ([`.github/workflows/daily-update.yml`](.github/workflows/daily-update.yml)) runs on GitHub's servers:
@@ -44,6 +55,7 @@ Orders are simulated; the weather is real. Each day uses its own random seed, so
 
 ```
 Food Delivery System/
+├── ARCHITECTURE.md             # architecture diagram, components, design decisions
 ├── 01_schema.sql               # database + 12 tables, keys, constraints
 ├── 02_generate_data.py         # Python data generator (1 lakh orders, every state; no Faker needed)
 ├── data_parts/                 # the first 1,00,000 orders (Jan 2025 – Sep 2026) as 10 SQL files of ~2.6 MB
