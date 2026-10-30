@@ -526,5 +526,37 @@
    "Visakhapatnam"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-10-30",
+  "orders": 261,
+  "revenue": 120368,
+  "new_customers": 19,
+  "rain_cities": [
+   "Bhubaneswar",
+   "Dehradun",
+   "Delhi",
+   "Dimapur",
+   "Gangtok",
+   "Gurugram",
+   "Guwahati",
+   "Imphal",
+   "Jaipur",
+   "Kanpur",
+   "Kolkata",
+   "Lucknow",
+   "Mangaluru",
+   "Mumbai",
+   "Noida",
+   "Patna",
+   "Pune",
+   "Ranchi",
+   "Shillong",
+   "Siliguri",
+   "Varanasi",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
  }
 ]
