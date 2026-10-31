@@ -558,5 +558,23 @@
    "Visakhapatnam"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-10-31",
+  "orders": 282,
+  "revenue": 101431,
+  "new_customers": 18,
+  "rain_cities": [
+   "Aizawl",
+   "Bhubaneswar",
+   "Dimapur",
+   "Hyderabad",
+   "Lucknow",
+   "Patna",
+   "Pune",
+   "Ranchi",
+   "Shillong"
+  ],
+  "weather": true
  }
 ]
