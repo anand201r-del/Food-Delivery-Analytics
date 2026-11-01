@@ -576,5 +576,21 @@
    "Shillong"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-01",
+  "orders": 301,
+  "revenue": 131886,
+  "new_customers": 23,
+  "rain_cities": [
+   "Coimbatore",
+   "Dimapur",
+   "Guwahati",
+   "Kochi",
+   "Mangaluru",
+   "Panaji",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
  }
 ]
