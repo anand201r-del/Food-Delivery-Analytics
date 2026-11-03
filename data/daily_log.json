@@ -592,5 +592,26 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-02",
+  "orders": 192,
+  "revenue": 81296,
+  "new_customers": 14,
+  "rain_cities": [
+   "Bengaluru",
+   "Bhubaneswar",
+   "Chennai",
+   "Dimapur",
+   "Itanagar",
+   "Mangaluru",
+   "Panaji",
+   "Puducherry",
+   "Pune",
+   "Ranchi",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
  }
 ]
