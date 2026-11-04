@@ -613,5 +613,25 @@
    "Visakhapatnam"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-03",
+  "orders": 203,
+  "revenue": 87676,
+  "new_customers": 22,
+  "rain_cities": [
+   "Bhubaneswar",
+   "Dimapur",
+   "Itanagar",
+   "Kolkata",
+   "Mangaluru",
+   "Mysuru",
+   "Panaji",
+   "Raipur",
+   "Thiruvananthapuram",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
  }
 ]
