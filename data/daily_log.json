@@ -706,5 +706,20 @@
    "Vijayawada"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-08",
+  "orders": 343,
+  "revenue": 137309,
+  "new_customers": 16,
+  "rain_cities": [
+   "Chennai",
+   "Coimbatore",
+   "Madurai",
+   "Mangaluru",
+   "Puducherry",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
  }
 ]
