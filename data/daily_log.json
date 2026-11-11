@@ -733,5 +733,17 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-10",
+  "orders": 204,
+  "revenue": 73290,
+  "new_customers": 24,
+  "rain_cities": [
+   "Kolkata",
+   "Mangaluru",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
  }
 ]
