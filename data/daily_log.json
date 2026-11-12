@@ -745,5 +745,16 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-11",
+  "orders": 197,
+  "revenue": 83388,
+  "new_customers": 22,
+  "rain_cities": [
+   "Gangtok",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
  }
 ]
