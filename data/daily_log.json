@@ -756,5 +756,19 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-12",
+  "orders": 197,
+  "revenue": 92328,
+  "new_customers": 21,
+  "rain_cities": [
+   "Aizawl",
+   "Dimapur",
+   "Imphal",
+   "Srinagar",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
  }
 ]
