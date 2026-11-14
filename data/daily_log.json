@@ -781,5 +781,15 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-14",
+  "orders": 302,
+  "revenue": 124504,
+  "new_customers": 24,
+  "rain_cities": [
+   "Srinagar"
+  ],
+  "weather": true
  }
 ]
