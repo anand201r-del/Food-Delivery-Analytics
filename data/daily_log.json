@@ -791,5 +791,17 @@
    "Srinagar"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-15",
+  "orders": 342,
+  "revenue": 134801,
+  "new_customers": 15,
+  "rain_cities": [
+   "Gangtok",
+   "Shimla",
+   "Srinagar"
+  ],
+  "weather": true
  }
 ]
