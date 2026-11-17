@@ -803,5 +803,18 @@
    "Srinagar"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-16",
+  "orders": 206,
+  "revenue": 69949,
+  "new_customers": 20,
+  "rain_cities": [
+   "Dimapur",
+   "Gangtok",
+   "Guwahati",
+   "Itanagar"
+  ],
+  "weather": true
  }
 ]
