@@ -816,5 +816,15 @@
    "Itanagar"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-17",
+  "orders": 191,
+  "revenue": 81440,
+  "new_customers": 17,
+  "rain_cities": [
+   "Itanagar"
+  ],
+  "weather": true
  }
 ]
