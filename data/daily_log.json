@@ -826,5 +826,17 @@
    "Itanagar"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-18",
+  "orders": 192,
+  "revenue": 75257,
+  "new_customers": 17,
+  "rain_cities": [
+   "Bhubaneswar",
+   "Kochi",
+   "Thiruvananthapuram"
+  ],
+  "weather": true
  }
 ]
