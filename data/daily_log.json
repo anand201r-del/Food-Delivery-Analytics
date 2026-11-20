@@ -838,5 +838,21 @@
    "Thiruvananthapuram"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-19",
+  "orders": 218,
+  "revenue": 93248,
+  "new_customers": 16,
+  "rain_cities": [
+   "Agartala",
+   "Aizawl",
+   "Bhubaneswar",
+   "Imphal",
+   "Kochi",
+   "Kolkata",
+   "Visakhapatnam"
+  ],
+  "weather": true
  }
 ]
