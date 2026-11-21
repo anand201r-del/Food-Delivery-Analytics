@@ -854,5 +854,22 @@
    "Visakhapatnam"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-20",
+  "orders": 261,
+  "revenue": 113368,
+  "new_customers": 18,
+  "rain_cities": [
+   "Agartala",
+   "Aizawl",
+   "Bhubaneswar",
+   "Imphal",
+   "Kolkata",
+   "Raipur",
+   "Ranchi",
+   "Visakhapatnam"
+  ],
+  "weather": true
  }
 ]
