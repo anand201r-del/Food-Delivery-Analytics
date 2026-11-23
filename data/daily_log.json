@@ -889,5 +889,17 @@
    "Varanasi"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-22",
+  "orders": 295,
+  "revenue": 114129,
+  "new_customers": 17,
+  "rain_cities": [
+   "Dimapur",
+   "Guwahati",
+   "Shillong"
+  ],
+  "weather": true
  }
 ]
