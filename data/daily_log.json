@@ -901,5 +901,21 @@
    "Shillong"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-23",
+  "orders": 223,
+  "revenue": 92212,
+  "new_customers": 18,
+  "rain_cities": [
+   "Aizawl",
+   "Chennai",
+   "Dimapur",
+   "Guwahati",
+   "Puducherry",
+   "Shillong",
+   "Visakhapatnam"
+  ],
+  "weather": true
  }
 ]
