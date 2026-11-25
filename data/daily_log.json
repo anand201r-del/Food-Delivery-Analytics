@@ -917,5 +917,24 @@
    "Visakhapatnam"
   ],
   "weather": true
+ },
+ {
+  "date": "2026-11-24",
+  "orders": 215,
+  "revenue": 88911,
+  "new_customers": 21,
+  "rain_cities": [
+   "Aizawl",
+   "Bengaluru",
+   "Chennai",
+   "Coimbatore",
+   "Dimapur",
+   "Madurai",
+   "Puducherry",
+   "Thiruvananthapuram",
+   "Vijayawada",
+   "Visakhapatnam"
+  ],
+  "weather": true
  }
 ]
